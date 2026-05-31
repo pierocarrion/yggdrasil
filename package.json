@@ -1,0 +1,35 @@
+{
+  "name": "yggdrasil",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build --turbopack",
+    "start": "next start",
+    "lint": "eslint",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@google-cloud/vertexai": "^1.12.0",
+    "@google/generative-ai": "^0.24.1",
+    "d3": "^7.9.0",
+    "firebase": "^12.14.0",
+    "firebase-admin": "^13.10.0",
+    "next": "15.5.18",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "stripe": "^22.2.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.18",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
