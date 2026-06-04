@@ -4,7 +4,7 @@ export interface Connection {
   entryIdB: string;
   score: number; // 0–1
   reason: string;
-  computedVia: 'cirq' | 'fallback_vertex';
+  computedVia: 'cirq' | 'fallback_knn';
   computedAt: number;
 }
 

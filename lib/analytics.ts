@@ -10,7 +10,7 @@ const logEvent = (eventName: string, eventParams?: Record<string, any>) => {
 };
 
 // Journaling
-export const logEntryCreated = (params: { entry_type: EntryType; has_mood: boolean; tag_count: number; word_count: number }) => {
+export const logEntryCreated = (params: { entry_type?: EntryType; has_mood: boolean; tag_count: number; word_count: number }) => {
   logEvent('entry_created', params);
 };
 
@@ -47,7 +47,7 @@ export const logHiddenConnectionsViewed = () => {
   logEvent('hidden_connections_viewed');
 };
 
-export const logHiddenConnectionsComputation = (params: { path: 'cirq' | 'fallback_vertex' }) => {
+export const logHiddenConnectionsComputation = (params: { path: 'cirq' | 'fallback_knn' }) => {
   logEvent('hidden_connections_computation', params);
 };
 

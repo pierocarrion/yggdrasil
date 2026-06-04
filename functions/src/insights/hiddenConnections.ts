@@ -16,7 +16,7 @@ export const computeHiddenConnections = onCall(async (request) => {
     throw new HttpsError('invalid-argument', 'Missing or invalid userId.');
   }
 
-  let computationPath: 'cirq' | 'fallback_vertex' = 'cirq';
+  let computationPath: 'cirq' | 'fallback_knn' = 'cirq';
   let connections: any[] = [];
 
   try {
@@ -28,7 +28,7 @@ export const computeHiddenConnections = onCall(async (request) => {
     throw new Error('Cirq placeholder error to trigger fallback');
   } catch (error) {
     // Silently fallback to Firestore KNN cosine similarity
-    computationPath = 'fallback_vertex';
+    computationPath = 'fallback_knn';
     logger.info('Cirq failed or disabled, falling back to Firestore KNN similarity');
     
     const db = admin.firestore();

@@ -1,18 +1,14 @@
-export enum Mood {
-  VERY_LOW = 'VERY_LOW',
-  LOW = 'LOW',
-  NEUTRAL = 'NEUTRAL',
-  HIGH = 'HIGH',
-  VERY_HIGH = 'VERY_HIGH',
+export interface Mood {
+  polarity: number;
+  intensity: number;
+  derivedLabel: string;
 }
 
 export enum EntryType {
   REFLECTION = 'REFLECTION',
-  DREAM = 'DREAM',
   GRATITUDE = 'GRATITUDE',
-  VENT = 'VENT',
-  INTENTION = 'INTENTION',
-  FREE_WRITE = 'FREE_WRITE',
+  DREAM = 'DREAM',
+  EVENT = 'EVENT',
 }
 
 export interface JournalEntry {
@@ -20,8 +16,8 @@ export interface JournalEntry {
   userId: string;
   title: string;
   content: string; // rich text string
-  mood: Mood;
-  entryType: EntryType;
+  mood?: Mood;
+  entryType?: EntryType;
   tags: string[];
   wordCount: number;
   createdAt: number;
@@ -30,20 +26,28 @@ export interface JournalEntry {
   embeddingGeneratedAt?: any; // FirebaseFirestore.Timestamp
 }
 
+export interface Interpretation {
+  main_insight: string;
+  questions: string[];
+  action_items: string[];
+  patterns_identified: string[];
+  growth_connection: string;
+  frameworks_applied?: string[];
+  depth_analysis?: string;
+}
+
 export interface EntryAnalysis {
   id?: string;
   entryId?: string;
+  entities: string[];
   themes: string[];
   emotions: string[];
-  peopleMentioned: string[];
-  sentimentScore: number;
-  archetypes: string[];
-  attachmentPatterns: string[];
-  shadowElements: string[];
-  growthEdges: string[];
-  goalSuggestions: string[];
   keywords: string[];
   summary: string;
-  spiritualInsights: string[];
-  hiddenPatterns: string[];
+  safety_concerns: string;
+  interpretation: Interpretation;
+  chakra_tags?: string[];
+  tarot_tags?: string[];
+  sacred_geometry?: string[];
+  archetype_tags?: string[];
 }
