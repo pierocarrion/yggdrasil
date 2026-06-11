@@ -2,11 +2,13 @@
 
 import React, { useRef, useEffect, useState } from "react";
 import { EntryTypeSelector, type EntryType } from "./EntryTypeSelector";
+import { MoodSliders, type MoodState } from "./MoodSliders";
 
 export function Composer() {
   const editorRef = useRef<HTMLDivElement>(null);
   const [content, setContent] = useState("");
   const [entryType, setEntryType] = useState<EntryType>(null);
+  const [mood, setMood] = useState<MoodState | null>(null);
 
   useEffect(() => {
     // Focus on mount so user can start typing immediately
@@ -29,7 +31,7 @@ export function Composer() {
   };
 
   const handleSave = () => {
-    console.log("Saving entry...", { content, entryType });
+    console.log("Saving entry...", { content, entryType, mood });
     // TODO: Wire up Firestore save logic for LAU-JRNL-04
   };
 
@@ -71,7 +73,8 @@ export function Composer() {
       />
 
       {/* Post-Composer Options */}
-      <div className="px-8 pb-4">
+      <div className="px-8 pb-8 flex flex-col gap-6">
+        <MoodSliders mood={mood} onChange={setMood} />
         <EntryTypeSelector selectedType={entryType} onChange={setEntryType} />
       </div>
 
