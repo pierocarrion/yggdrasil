@@ -6,6 +6,7 @@ import { MoodSliders, type MoodState } from "./MoodSliders";
 import { createEntry } from "@/lib/entries";
 import { auth } from "@/lib/firebase/client";
 import { logEntryCreated } from "@/lib/analytics";
+import { ThinkingIndicator } from "./ThinkingIndicator";
 
 export function Composer() {
   const editorRef = useRef<HTMLDivElement>(null);
@@ -13,7 +14,8 @@ export function Composer() {
   const [entryType, setEntryType] = useState<EntryType>(null);
   const [mood, setMood] = useState<MoodState | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'thinking' | 'error'>('idle');
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'error'>('idle');
+  const [pendingEntryId, setPendingEntryId] = useState<string | null>(null);
 
   useEffect(() => {
     // Focus on mount so user can start typing immediately
@@ -42,7 +44,7 @@ export function Composer() {
     setSaveStatus('saving');
 
     try {
-      await createEntry({
+      const entryId = await createEntry({
         userId: auth.currentUser.uid,
         content,
         entryType,
@@ -69,9 +71,8 @@ export function Composer() {
       setEntryType(null);
       setMood(null);
       
-      setSaveStatus('thinking');
-      // Hide the thinking indicator after a few seconds
-      setTimeout(() => setSaveStatus('idle'), 6000);
+      setSaveStatus('idle');
+      setPendingEntryId(entryId);
     } catch (error) {
       console.error('Failed to save entry:', error);
       setSaveStatus('error');
@@ -126,12 +127,7 @@ export function Composer() {
       {/* Footer */}
       <div className="p-4 border-t border-border/40 flex justify-between items-center bg-surface">
         <div className="text-sm">
-          {saveStatus === 'thinking' && (
-            <span className="text-gold italic font-display animate-pulse flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-gold inline-block" />
-              Yggdrasil is thinking...
-            </span>
-          )}
+          {pendingEntryId && <ThinkingIndicator entryId={pendingEntryId} />}
           {saveStatus === 'error' && (
             <span className="text-red-400 italic">Failed to save. Please try again.</span>
           )}
