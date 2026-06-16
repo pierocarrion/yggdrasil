@@ -59,7 +59,6 @@ export const computeHiddenConnections = onCall(async (request) => {
         });
 
       const snapshot = await vectorQuery.get();
-      // @ts-ignore - vectorQueryResults might not be typed properly depending on admin sdk version, but it's part of the feature
       const vectorQueryResults = (snapshot as any).vectorQueryResults;
 
       snapshot.docs.forEach((doc) => {
