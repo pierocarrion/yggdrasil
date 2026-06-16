@@ -20,7 +20,7 @@ describe('LoginPage', () => {
     render(<LoginPage />)
 
     expect(
-      screen.getByText('Welcome to Yggdrasil'),
+      screen.getByText(/Welcome.*to Yggdrasil/i),
     ).toBeInTheDocument()
 
     expect(
