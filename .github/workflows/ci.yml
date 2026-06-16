@@ -20,6 +20,6 @@ jobs:
       - name: Lint
         run: npm run lint
       - name: Test
-        run: npm test -- --passWithNoTests
+        run: npm run test --if-present -- --passWithNoTests
       - name: Build functions
         run: cd functions && npm ci && npm run build
