@@ -1,16 +1,31 @@
 import { logEvent as firebaseLogEvent } from 'firebase/analytics';
-import { analytics } from './firebase/client';
+import type { CustomParams } from 'firebase/analytics';
+import { analyticsReady } from '@/lib/firebase/client';
 import { EntryType, Mood } from '@/types/journal';
+import type { EntryType as ComposerEntryType } from '@/components/journal/EntryTypeSelector';
+
+const isAnalyticsDebug = process.env.NEXT_PUBLIC_ANALYTICS_DEBUG === 'true';
 
 // Helper to safely log events only on the client
-const logEvent = (eventName: string, eventParams?: Record<string, any>) => {
-  if (typeof window !== 'undefined' && analytics) {
-    firebaseLogEvent(analytics, eventName, eventParams);
+const logEvent = async (eventName: string, eventParams?: CustomParams) => {
+  if (typeof window === 'undefined') {
+    return;
   }
+
+  const analytics = await analyticsReady;
+
+  if (!analytics) {
+    return;
+  }
+
+  firebaseLogEvent(analytics, eventName, {
+    ...eventParams,
+    ...(isAnalyticsDebug ? { debug_mode: 1 } : {}),
+  });
 };
 
 // Journaling
-export const logEntryCreated = (params: { entry_type?: EntryType; has_mood: boolean; tag_count: number; word_count: number }) => {
+export const logEntryCreated = (params: { entry_type?: EntryType | ComposerEntryType; has_mood: boolean; tag_count: number; word_count: number }) => {
   logEvent('entry_created', params);
 };
 

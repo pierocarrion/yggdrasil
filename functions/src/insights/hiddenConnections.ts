@@ -1,6 +1,7 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
 import * as logger from 'firebase-functions/logger';
+import { logHiddenConnectionsComputed } from '../lib/analytics';
 // import { VertexAI } from '@google-cloud/vertexai'; // Used in fallback
 
 export const computeHiddenConnections = onCall(async (request) => {
@@ -99,6 +100,8 @@ export const computeHiddenConnections = onCall(async (request) => {
     }
 
     await batch.commit();
+
+    await logHiddenConnectionsComputed(userId, computationPath, connections.length);
 
     logger.info('hidden_connections_computation fired', { userId, path: computationPath });
 

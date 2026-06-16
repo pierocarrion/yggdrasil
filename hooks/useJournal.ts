@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import { JournalEntry } from '@/types/journal';
-import { logEntryCreated, logEntryEdited, logEntryDeleted } from '@/lib/analytics';
+import { logEntryCreated, logEntryEdited, logEntryDeleted } from '@/lib/analytics/client';
 import { useAuth } from './useAuth';
 import { createConverter } from '@/lib/firebase/converters';
 

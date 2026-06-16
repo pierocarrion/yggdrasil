@@ -6,4 +6,5 @@ export interface UserProfile {
   createdAt: number;
   streakDays: number;
   lastEntryAt: number;
+  analyticsClientId?: string;
 }

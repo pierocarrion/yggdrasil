@@ -5,7 +5,7 @@ import { EntryTypeSelector, type EntryType } from "./EntryTypeSelector";
 import { MoodSliders, type MoodState } from "./MoodSliders";
 import { createEntry } from "@/lib/entries";
 import { auth } from "@/lib/firebase/client";
-import { logEntryCreated } from "@/lib/analytics";
+import { logEntryCreated } from "@/lib/analytics/client";
 
 export function Composer() {
   const editorRef = useRef<HTMLDivElement>(null);
@@ -55,7 +55,7 @@ export function Composer() {
       const wordCount = textContent.trim().split(/\s+/).filter(Boolean).length;
       
       logEntryCreated({
-        entry_type: (entryType as any) || undefined,
+        entry_type: entryType ?? undefined,
         has_mood: !!mood,
         tag_count: 0,
         word_count: wordCount

@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { stripe } from '@/lib/stripe/client';
 import { adminDb } from '@/lib/firebase/admin';
 import type { UserProfile } from '@/types/user';
+import { logSubscriptionCancelled, logSubscriptionRenewed, logSubscriptionStarted } from '@/lib/analytics/server';
 
 // In App Router the raw body is always accessible via req.arrayBuffer() —
 // no bodyParser config required (that was a Pages Router concept).
@@ -38,9 +39,11 @@ export async function POST(req: Request) {
         const session = event.data.object as Stripe.Checkout.Session;
         const uid = session.metadata?.uid ?? session.client_reference_id;
         const priceId = session.metadata?.priceId;
+        const plan = priceId ? planFromPriceId(priceId) : null;
 
-        if (uid && priceId) {
-          await adminDb.doc(`users/${uid}`).update({ plan: planFromPriceId(priceId) });
+        if (uid && plan) {
+          await adminDb.doc(`users/${uid}`).update({ plan });
+          await logSubscriptionStarted(uid, plan);
         }
         break;
       }
@@ -49,9 +52,11 @@ export async function POST(req: Request) {
         const subscription = event.data.object as Stripe.Subscription;
         const uid = subscription.metadata?.uid;
         const priceId = subscription.items.data[0]?.price.id;
+        const plan = priceId ? planFromPriceId(priceId) : null;
 
-        if (uid && priceId) {
-          await adminDb.doc(`users/${uid}`).update({ plan: planFromPriceId(priceId) });
+        if (uid && plan) {
+          await adminDb.doc(`users/${uid}`).update({ plan });
+          await logSubscriptionRenewed(uid);
         }
         break;
       }
@@ -62,6 +67,7 @@ export async function POST(req: Request) {
 
         if (uid) {
           await adminDb.doc(`users/${uid}`).update({ plan: 'FREE' });
+          await logSubscriptionCancelled(uid);
         }
         break;
       }

@@ -2,6 +2,7 @@ import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import * as admin from 'firebase-admin';
 import * as logger from 'firebase-functions/logger';
 import { generateText, generateEmbedding } from '../lib/gemini';
+import { logInsightGenerated } from '../lib/analytics';
 
 const ALL_FRAMEWORKS = [
   'Theravada Buddhist', 'Freudian', 'Jungian', 'Hermetic',
@@ -121,6 +122,7 @@ Entry (depthScore: ${depthScore}):
       await batch.commit();
 
       logger.info('insight_generated', { userId, entryId, depthScore });
+      await logInsightGenerated(userId, entryId, depthScore);
     } catch (error) {
       logger.error('analyzeEntry failed', { userId, entryId, error });
       await entryRef.update({ analysisStatus: 'error' }).catch(() => {});
