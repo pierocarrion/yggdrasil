@@ -1,5 +1,7 @@
 import { InsightsTracker } from './_tracker';
 import { StreakCalendar } from '@/components/insights/StreakCalendar';
+import { MoodCharts } from '@/components/insights/MoodCharts';
+import { EmotionalPatterns } from '@/components/insights/EmotionalPatterns';
 
 export default function InsightsPage() {
   return (
@@ -15,6 +17,14 @@ export default function InsightsPage() {
 
       <div className="mt-8 mb-12">
         <StreakCalendar />
+      </div>
+
+      <div className="mb-12">
+        <MoodCharts />
+      </div>
+
+      <div className="mb-12">
+        <EmotionalPatterns />
       </div>
 
     </div>
