@@ -4,11 +4,7 @@ import * as logger from 'firebase-functions/logger';
 import { logInsightGenerated } from '../lib/analytics';
 import { generateText, generateEmbedding, geminiapikey } from '../lib/gemini';
 
-const ALL_FRAMEWORKS = [
-  'Theravada Buddhist', 'Freudian', 'Jungian', 'Hermetic',
-  'Advaita Vedanta', 'Taoist', 'Attachment Theory', 'IFS',
-  'CBT', 'DBT', 'Stoic', 'Gnostic',
-];
+
 
 export const analyzeEntry = onDocumentWritten(
   {
@@ -60,18 +56,18 @@ Entry:
       if (depthScore >= 3) {
         try {
           const settingsSnap = await db.doc(`users/${userId}/settings/preferences`).get();
-          const saved: string[] = settingsSnap.data()?.enabledFrameworks ?? [];
-          enabledFrameworks = saved.length > 0 ? saved : ALL_FRAMEWORKS;
+          enabledFrameworks = settingsSnap.data()?.enabledFrameworks ?? [];
         } catch {
-          enabledFrameworks = ALL_FRAMEWORKS;
+          enabledFrameworks = [];
         }
       }
 
-      const depthFieldsSpec = depthScore >= 3
+      const depthFieldsSpec = depthScore >= 3 && enabledFrameworks.length > 0
         ? `,
     "frameworks_applied": string[] — which of these frameworks were relevant: [${enabledFrameworks.join(', ')}],
     "depth_analysis": string — a short paragraph on deeper psychological/spiritual themes, shadow elements, or archetypal dynamics`
-        : '';
+        : (depthScore >= 3 ? `,
+    "depth_analysis": string — a short paragraph on deeper psychological/spiritual themes, shadow elements, or archetypal dynamics` : '');
 
       const analysisPrompt = `Analyze this journal entry and return ONLY a JSON object. No prose, no markdown fences — raw JSON only.
 
