@@ -10,9 +10,18 @@ import { SettingsTracker } from './_tracker';
 import { toast } from 'sonner';
 
 const ALL_FRAMEWORKS = [
-  'Theravada Buddhist', 'Freudian', 'Jungian', 'Hermetic',
-  'Advaita Vedanta', 'Taoist', 'Attachment Theory', 'IFS',
-  'CBT', 'DBT', 'Stoic', 'Gnostic',
+  { id: 'Theravada Buddhist', description: 'Emphasizes mindfulness, impermanence, and detachment to reduce suffering.' },
+  { id: 'Freudian', description: 'Focuses on unconscious desires, childhood experiences, and defense mechanisms.' },
+  { id: 'Jungian', description: 'Explores the collective unconscious, archetypes, shadow work, and individuation.' },
+  { id: 'Hermetic', description: 'Based on esoteric wisdom, correspondence (as above, so below), and mental alchemy.' },
+  { id: 'Advaita Vedanta', description: 'A non-dual philosophy emphasizing the underlying unity of the self and the universe.' },
+  { id: 'Taoist', description: 'Focuses on living in harmony with the Tao (the Way), effortless action, and balance.' },
+  { id: 'Attachment Theory', description: 'Analyzes how early relationships shape adult emotional bonds and relational patterns.' },
+  { id: 'IFS', description: 'Views the mind as a system of sub-personalities (parts) led by a compassionate core Self.' },
+  { id: 'CBT', description: 'Focuses on identifying and reframing negative thought patterns and behaviors.' },
+  { id: 'DBT', description: 'Combines acceptance and change, emphasizing emotional regulation and distress tolerance.' },
+  { id: 'Stoic', description: 'Teaches focus on what is within your control, cultivating resilience and rational virtue.' },
+  { id: 'Gnostic', description: 'Focuses on direct, personal spiritual knowledge (gnosis) and transcending illusion.' },
 ];
 
 export default function SettingsPage() {
@@ -24,19 +33,19 @@ export default function SettingsPage() {
   const { data: preferences, loading } = useFirestoreDoc<{ enabledFrameworks?: string[] }>(prefsPath);
   const enabledFrameworks = preferences?.enabledFrameworks ?? [];
 
-  const toggleFramework = useCallback(async (framework: string) => {
+  const toggleFramework = useCallback(async (frameworkId: string) => {
     if (!user) return;
     
-    const isEnabled = enabledFrameworks.includes(framework);
+    const isEnabled = enabledFrameworks.includes(frameworkId);
     const newFrameworks = isEnabled 
-      ? enabledFrameworks.filter(f => f !== framework)
-      : [...enabledFrameworks, framework];
+      ? enabledFrameworks.filter(f => f !== frameworkId)
+      : [...enabledFrameworks, frameworkId];
 
     try {
       await setDoc(doc(db, prefsPath), {
         enabledFrameworks: newFrameworks
       }, { merge: true });
-      toast.success(isEnabled ? `Disabled ${framework} framework` : `Enabled ${framework} framework`);
+      toast.success(isEnabled ? `Disabled ${frameworkId} framework` : `Enabled ${frameworkId} framework`);
     } catch (err) {
       console.error('Failed to update frameworks:', err);
       toast.error('Failed to update framework');
@@ -75,23 +84,23 @@ export default function SettingsPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {ALL_FRAMEWORKS.map(framework => {
-              const checked = enabledFrameworks.includes(framework);
+              const checked = enabledFrameworks.includes(framework.id);
               return (
                 <label 
-                  key={framework} 
-                  className={`flex items-center p-4 rounded-xl border cursor-pointer transition-colors ${
+                  key={framework.id} 
+                  className={`flex items-start p-4 rounded-xl border cursor-pointer transition-colors ${
                     checked 
-                      ? 'bg-gold/10 border-gold/30 text-gold' 
-                      : 'bg-surface-2 border-border/40 text-muted-foreground hover:bg-surface-2/80'
+                      ? 'bg-gold/10 border-gold/30' 
+                      : 'bg-surface-2 border-border/40 hover:bg-surface-2/80'
                   }`}
                 >
                   <input
                     type="checkbox"
                     className="sr-only"
                     checked={checked}
-                    onChange={() => toggleFramework(framework)}
+                    onChange={() => toggleFramework(framework.id)}
                   />
-                  <div className={`w-5 h-5 rounded border mr-3 flex items-center justify-center ${
+                  <div className={`w-5 h-5 rounded border mt-0.5 mr-3 flex-shrink-0 flex items-center justify-center ${
                     checked ? 'bg-gold border-gold' : 'border-muted-foreground/50'
                   }`}>
                     {checked && (
@@ -100,9 +109,14 @@ export default function SettingsPage() {
                       </svg>
                     )}
                   </div>
-                  <span className={`font-medium ${checked ? 'text-foreground' : 'text-foreground/80'}`}>
-                    {framework}
-                  </span>
+                  <div className="flex flex-col">
+                    <span className={`font-medium ${checked ? 'text-gold' : 'text-foreground/80'}`}>
+                      {framework.id}
+                    </span>
+                    <span className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                      {framework.description}
+                    </span>
+                  </div>
                 </label>
               );
             })}
