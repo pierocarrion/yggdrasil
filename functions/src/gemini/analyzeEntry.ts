@@ -77,7 +77,7 @@ Required fields:
 - "emotions": [{ "label": string, "polarity": number (0–10; 5=neutral; lower=more negative, higher=more positive), "intensity": number (0–10; 5=moderate) }, ...]
 - "keywords": string[] — significant single words or short phrases for search and tagging
 - "summary": string — 2–3 sentence neutral third-person summary of what the entry is about; no interpretation
-- "safety_concerns": { "flagged": boolean, "concerns": string[] }
+- "safety_concerns": { "flagged": boolean, "concerns": string[] } — set flagged to true if the entry contains self-harm, suicidal ideation, violence, severe depression, or acute crisis
 - "interpretation": {
     "main_insight": string — core psychological/spiritual insight in 1–2 sentences; warm, reflective tone,
     "questions": string[] — 3 to 5 reflective open-ended questions for the writer,
@@ -135,12 +135,33 @@ Entry (depthScore: ${depthScore}):
 
       logger.info('insight_generated', { userId, entryId, depthScore });
       await logInsightGenerated(userId, entryId, depthScore);
+      
+      // Write to opsLogs collection for admin visibility
+      await db.collection('opsLogs').add({
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        userId,
+        entryId,
+        model: 'gemini-3.5-flash',
+        status: 'success',
+        depthScore
+      });
+
     } catch (error) {
       logger.error('analyzeEntry failed', { userId, entryId, error });
       const errorMessage = error instanceof Error ? error.message : String(error);
       await entryRef.update({ 
         analysisStatus: 'error',
         analysisError: errorMessage
+      }).catch(() => {});
+      
+      // Write failure to opsLogs collection
+      await admin.firestore().collection('opsLogs').add({
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        userId,
+        entryId,
+        model: 'gemini-3.5-flash',
+        status: 'error',
+        error: errorMessage
       }).catch(() => {});
     }
   }

@@ -35,7 +35,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${cormorant.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} ${cormorant.variable} ${jetbrainsMono.variable} font-sans antialiased`} suppressHydrationWarning>
         <AuthProvider>{children}</AuthProvider>
         <Toaster 
           position="bottom-right" 

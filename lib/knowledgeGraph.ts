@@ -75,28 +75,35 @@ export function buildKnowledgeGraph(entries: (JournalEntry & { analysis?: EntryA
     const entryEmbedding = Array.isArray(entry.embedding) ? entry.embedding : null;
     
     // Process themes
-    entry.analysis.themes?.forEach(theme => {
-      const id = `theme_${theme.toLowerCase().replace(/\s+/g, '_')}`;
-      if (!nodeMap.has(id)) {
-        nodeMap.set(id, { label: theme, type: 'theme', weight: 0, embeddings: [], entryIds: [] });
-      }
-      const node = nodeMap.get(id)!;
-      node.weight++;
-      if (!node.entryIds.includes(entry.id)) node.entryIds.push(entry.id);
-      if (entryEmbedding) node.embeddings.push(entryEmbedding);
-    });
+    if (Array.isArray(entry.analysis.themes)) {
+      entry.analysis.themes.forEach(theme => {
+        if (!theme || typeof theme !== 'string') return;
+        const id = `theme_${theme.toLowerCase().replace(/\s+/g, '_')}`;
+        if (!nodeMap.has(id)) {
+          nodeMap.set(id, { label: theme, type: 'theme', weight: 0, embeddings: [], entryIds: [] });
+        }
+        const node = nodeMap.get(id)!;
+        node.weight++;
+        if (!node.entryIds.includes(entry.id)) node.entryIds.push(entry.id);
+        if (entryEmbedding) node.embeddings.push(entryEmbedding);
+      });
+    }
     
     // Process entities
-    entry.analysis.entities?.forEach(entity => {
-      const id = `entity_${entity.type}_${entity.name.toLowerCase().replace(/\s+/g, '_')}`;
-      if (!nodeMap.has(id)) {
-        nodeMap.set(id, { label: entity.name, type: entity.type, weight: 0, embeddings: [], entryIds: [] });
-      }
-      const node = nodeMap.get(id)!;
-      node.weight++;
-      if (!node.entryIds.includes(entry.id)) node.entryIds.push(entry.id);
-      if (entryEmbedding) node.embeddings.push(entryEmbedding);
-    });
+    if (Array.isArray(entry.analysis.entities)) {
+      entry.analysis.entities.forEach(entity => {
+        if (!entity || typeof entity !== 'object' || !entity.name || typeof entity.name !== 'string') return;
+        const type = entity.type || 'concept';
+        const id = `entity_${type}_${entity.name.toLowerCase().replace(/\s+/g, '_')}`;
+        if (!nodeMap.has(id)) {
+          nodeMap.set(id, { label: entity.name, type: type, weight: 0, embeddings: [], entryIds: [] });
+        }
+        const node = nodeMap.get(id)!;
+        node.weight++;
+        if (!node.entryIds.includes(entry.id)) node.entryIds.push(entry.id);
+        if (entryEmbedding) node.embeddings.push(entryEmbedding);
+      });
+    }
   });
   
   // 2. Sort nodes by weight (frequency) and filter by tier
