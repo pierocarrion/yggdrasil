@@ -88,8 +88,7 @@ export async function generateText(prompt: string, options?: GenerateTextOptions
 export async function generateEmbedding(text: string): Promise<number[]> {
   try {
     const embeddingModel = getGenAI().getGenerativeModel(
-      { model: DEFAULT_EMBEDDING_MODEL },
-      { apiVersion: 'v1alpha' }
+      { model: DEFAULT_EMBEDDING_MODEL }
     );
 
     const result = await embeddingModel.embedContent(text);

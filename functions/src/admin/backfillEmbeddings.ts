@@ -1,15 +1,13 @@
 import { onRequest } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
 import * as logger from 'firebase-functions/logger';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { geminiapikey } from '../lib/gemini';
+import { geminiapikey, generateEmbedding } from '../lib/gemini';
 
 export const backfillEmbeddings = onRequest(
   {
     secrets: [geminiapikey],
   },
   async (req, res) => {
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
   // Simple auth for admin endpoints if needed, but for this migration script
   // we'll assume it's protected by Cloud IAM or meant to be run once manually.
   
@@ -28,10 +26,6 @@ export const backfillEmbeddings = onRequest(
       return;
     }
 
-    const embeddingModel = genAI.getGenerativeModel({
-      model: process.env.GEMINI_MODEL_EMBEDDING || 'gemini-embedding-exp',
-    });
-
     let processedCount = 0;
 
     for (let i = 0; i < docsToProcess.length; i += batchSize) {
@@ -42,13 +36,17 @@ export const backfillEmbeddings = onRequest(
         const content = doc.data().content || doc.data().title || '';
         if (!content) return;
 
-        const embeddingResult = await embeddingModel.embedContent(content);
-        const embeddingValues = embeddingResult.embedding.values;
+        try {
+          const embeddingValues = await generateEmbedding(content);
 
-        batch.update(doc.ref, {
-          embedding: admin.firestore.FieldValue.vector(embeddingValues),
-          embeddingGeneratedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
+          batch.update(doc.ref, {
+            embedding: admin.firestore.FieldValue.vector(embeddingValues),
+            embeddingGeneratedAt: admin.firestore.FieldValue.serverTimestamp(),
+            embeddingError: admin.firestore.FieldValue.delete()
+          });
+        } catch (e) {
+          logger.error('Error generating embedding in backfill', e);
+        }
       });
 
       await Promise.all(promises);

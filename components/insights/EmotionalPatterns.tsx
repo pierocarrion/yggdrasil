@@ -196,7 +196,7 @@ export function EmotionalPatterns() {
           <select
             value={dateRange}
             onChange={(e) => setDateRange(Number(e.target.value) as DateRange)}
-            className="bg-card border border-border text-sm rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className="bg-card border border-border text-sm rounded-md pl-3 pr-8 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/50"
           >
             <option value={14}>Last 14 Days</option>
             <option value={30}>Last 30 Days</option>

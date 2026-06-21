@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useEffect, useState } from 'react';
+import { useMemo, useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useFirestore } from '@/hooks/useFirestore';
 import { orderBy } from 'firebase/firestore';
@@ -32,6 +32,7 @@ export function StreakCalendar() {
   );
 
   const [milestoneLogged, setMilestoneLogged] = useState<number | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Group and compute metrics
   const { 
@@ -171,19 +172,27 @@ export function StreakCalendar() {
     return weeks;
   }, [calendarData]);
 
+  // Scroll to the rightmost edge by default so user sees the current week
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      const container = scrollContainerRef.current;
+      container.scrollLeft = container.scrollWidth;
+    }
+  }, [calendarGrid]);
+
   if (loading) {
     return <div className="animate-pulse h-64 bg-secondary/30 rounded-xl" />;
   }
 
   const getIntensityClass = (count: number) => {
-    if (count === 0) return 'bg-secondary/20 dark:bg-secondary/10';
+    if (count === 0) return 'bg-surface-2';
     if (count === 1) return 'bg-emerald-500/40';
     if (count === 2) return 'bg-emerald-500/70';
     return 'bg-emerald-500';
   };
 
   const getMatrixIntensityClass = (count: number, maxCount: number) => {
-    if (count === 0) return 'bg-secondary/20 dark:bg-secondary/10';
+    if (count === 0) return 'bg-surface-2';
     const ratio = count / (maxCount || 1);
     if (ratio <= 0.25) return 'bg-emerald-500/30';
     if (ratio <= 0.5) return 'bg-emerald-500/50';
@@ -231,7 +240,7 @@ export function StreakCalendar() {
           <p className="text-xs text-muted-foreground w-full mb-6 text-left">
             A visual record of your daily journaling habit over the past year. Darker squares indicate days with multiple entries. Building a dense, uninterrupted map helps solidify your reflection habit.
           </p>
-          <div className="overflow-x-auto pb-4">
+          <div className="overflow-x-auto pb-4" ref={scrollContainerRef}>
             <div className="flex gap-1 min-w-max">
               {calendarGrid.map((week, wIdx) => (
                 <div key={wIdx} className="flex flex-col gap-1">
