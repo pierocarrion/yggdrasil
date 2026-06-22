@@ -164,7 +164,7 @@ export function ClusterMap() {
           id: entry.id,
           clusterIndex: cluster.index,
           entry,
-          radius: Math.max(6, Math.min(12, entry.wordCount / 50)) // size by word count
+          radius: Math.max(6, Math.min(12, (Number.isFinite(entry.wordCount) ? entry.wordCount : 0) / 50)) // size by word count
         });
       });
     });

@@ -75,12 +75,15 @@ export function Composer({ initialEntry, onSave }: ComposerProps = {}) {
 
     try {
       let entryId: string;
+      const textContent = content.replace(/<[^>]*>?/gm, " ");
+      const wordCount = textContent.trim().split(/\s+/).filter(Boolean).length;
       
       if (initialEntry) {
         await updateEntry(auth.currentUser.uid, initialEntry.id, {
           content,
           entryType,
-          mood
+          mood,
+          wordCount
         });
         entryId = initialEntry.id;
         toast.success("Entry updated successfully");
@@ -89,13 +92,10 @@ export function Composer({ initialEntry, onSave }: ComposerProps = {}) {
           userId: auth.currentUser.uid,
           content,
           entryType,
-          mood
+          mood,
+          wordCount
         });
         toast.success("Entry saved successfully");
-        
-        // Calculate basic word count for analytics
-        const textContent = content.replace(/<[^>]*>?/gm, ' ');
-        const wordCount = textContent.trim().split(/\s+/).filter(Boolean).length;
         
         logEntryCreated({
           entry_type: entryType ?? undefined,

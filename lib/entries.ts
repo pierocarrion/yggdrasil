@@ -8,6 +8,7 @@ export interface CreateEntryPayload {
   content: string;
   entryType?: EntryType | null;
   mood?: MoodState | null;
+  wordCount?: number;
 }
 
 /**
@@ -19,7 +20,7 @@ export interface CreateEntryPayload {
  * @returns The generated entry ID.
  */
 export async function createEntry(payload: CreateEntryPayload): Promise<string> {
-  const { userId, content, entryType, mood } = payload;
+  const { userId, content, entryType, mood, wordCount } = payload;
   
   if (!userId) {
     throw new Error('User ID is required to create an entry.');
@@ -45,6 +46,10 @@ export async function createEntry(payload: CreateEntryPayload): Promise<string> 
     entryData.entryType = entryType;
   }
 
+  if (wordCount !== undefined) {
+    entryData.wordCount = wordCount;
+  }
+
   if (mood && mood.label !== 'Unset') {
     entryData.moodPolarity = mood.polarity;
     entryData.moodIntensity = mood.intensity;
@@ -61,7 +66,7 @@ export async function updateEntry(
   entryId: string,
   payload: Partial<CreateEntryPayload>
 ): Promise<void> {
-  const { content, entryType, mood } = payload;
+  const { content, entryType, mood, wordCount } = payload;
   const entryRef = doc(db, `users/${userId}/entries/${entryId}`);
   
   const updateData: Record<string, any> = {
@@ -76,6 +81,10 @@ export async function updateEntry(
 
   if (entryType !== undefined) {
     updateData.entryType = entryType === null ? null : entryType;
+  }
+
+  if (wordCount !== undefined) {
+    updateData.wordCount = wordCount;
   }
 
   if (mood !== undefined) {
