@@ -9,6 +9,9 @@ import type { GraphNode, GraphEdge, GraphData } from '@/lib/knowledgeGraph';
 import { logKnowledgeGraphViewed } from '@/lib/analytics/client';
 import Link from 'next/link';
 
+type SimulationNode = GraphNode & d3.SimulationNodeDatum;
+type SimulationLink = Omit<GraphEdge, 'source' | 'target'> & d3.SimulationLinkDatum<SimulationNode>;
+
 export function KnowledgeGraph() {
   const { user } = useAuth();
   const [data, setData] = useState<GraphData | null>(null);
@@ -61,14 +64,49 @@ export function KnowledgeGraph() {
 
     const width = containerRef.current.clientWidth;
     const height = 500;
+    const graphPadding = 36;
     const svg = d3.select(containerRef.current).select<SVGSVGElement>('svg');
     svg.selectAll('*').remove();
+
+    const clampCoordinate = (value: number | undefined, min: number, max: number) => {
+      const fallback = (min + max) / 2;
+      const coordinate = value ?? fallback;
+      return Math.max(min, Math.min(max, coordinate));
+    };
+
+    const clampNodePosition = (d: SimulationNode) => {
+      const minX = Math.min(graphPadding, width / 2);
+      const maxX = Math.max(width - graphPadding, width / 2);
+      const minY = graphPadding;
+      const maxY = height - graphPadding;
+      const nextX = clampCoordinate(d.x, minX, maxX);
+      const nextY = clampCoordinate(d.y, minY, maxY);
+
+      if (nextX !== d.x) {
+        d.x = nextX;
+        d.vx = 0;
+      }
+
+      if (nextY !== d.y) {
+        d.y = nextY;
+        d.vy = 0;
+      }
+
+      if (d.fx !== undefined && d.fx !== null) {
+        d.fx = clampCoordinate(d.fx, minX, maxX);
+      }
+
+      if (d.fy !== undefined && d.fy !== null) {
+        d.fy = clampCoordinate(d.fy, minY, maxY);
+      }
+    };
 
     // Setup zoom container
     const g = svg.append('g');
 
     const zoom = d3.zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.5, 4])
+      .scaleExtent([0.8, 2.5])
+      .filter((event: Event) => event.type === 'wheel')
       .on('zoom', (event) => {
         g.attr('transform', event.transform);
       });
@@ -76,14 +114,14 @@ export function KnowledgeGraph() {
     svg.call(zoom);
 
     // D3 Data copies since forceSimulation mutates them
-    const nodes = data.nodes.map(d => ({ ...d })) as (GraphNode & d3.SimulationNodeDatum)[];
-    const links = data.edges.map(d => ({ ...d })) as (GraphEdge & d3.SimulationLinkDatum<GraphNode & d3.SimulationNodeDatum>)[];
+    const nodes: SimulationNode[] = data.nodes.map(d => ({ ...d }));
+    const links: SimulationLink[] = data.edges.map(d => ({ ...d }));
 
-    const simulation = d3.forceSimulation(nodes)
-      .force('link', d3.forceLink(links).id((d: any) => d.id).distance(100))
+    const simulation = d3.forceSimulation<SimulationNode>(nodes)
+      .force('link', d3.forceLink<SimulationNode, SimulationLink>(links).id(d => d.id).distance(100))
       .force('charge', d3.forceManyBody().strength(-200))
       .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collide', d3.forceCollide().radius((d: any) => Math.max(10, d.weight * 5 + 5)));
+      .force('collide', d3.forceCollide<SimulationNode>().radius(d => Math.max(10, d.weight * 5 + 5)));
 
     // Draw links
     const link = g.append('g')
@@ -101,28 +139,34 @@ export function KnowledgeGraph() {
 
     // Draw nodes
     const node = g.append('g')
-      .selectAll<SVGCircleElement, GraphNode & d3.SimulationNodeDatum>('circle')
+      .selectAll<SVGGElement, SimulationNode>('g')
       .data(nodes)
-      .join('circle')
-      .attr('r', d => Math.max(8, Math.min(25, d.weight * 3 + 5)))
-      .attr('fill', d => colorScale(d.type) as string)
-      .attr('stroke', '#fff')
-      .attr('stroke-width', 2)
-      .attr('class', 'cursor-pointer transition-all hover:stroke-foreground/50')
-      .call(d3.drag<SVGCircleElement, GraphNode & d3.SimulationNodeDatum>()
+      .join('g')
+      .attr('data-graph-node', 'true')
+      .attr('class', 'cursor-pointer')
+      .call(d3.drag<SVGGElement, SimulationNode>()
         .on('start', (event, d) => {
           if (!event.active) simulation.alphaTarget(0.3).restart();
+          clampNodePosition(d);
           d.fx = d.x;
           d.fy = d.y;
         })
         .on('drag', (event, d) => {
-          d.fx = event.x;
-          d.fy = event.y;
+          d.x = event.x;
+          d.y = event.y;
+          clampNodePosition(d);
+          d.fx = d.x;
+          d.fy = d.y;
         })
         .on('end', (event, d) => {
           if (!event.active) simulation.alphaTarget(0);
-          d.fx = null;
-          d.fy = null;
+          d.x = event.x;
+          d.y = event.y;
+          clampNodePosition(d);
+          d.fx = d.x;
+          d.fy = d.y;
+          d.vx = 0;
+          d.vy = 0;
         })
       )
       .on('click', (event, d) => {
@@ -131,11 +175,15 @@ export function KnowledgeGraph() {
         if (originalNode) setSelectedNode(originalNode);
       });
 
+    node.append('circle')
+      .attr('r', d => Math.max(8, Math.min(25, d.weight * 3 + 5)))
+      .attr('fill', d => colorScale(d.type) as string)
+      .attr('stroke', '#fff')
+      .attr('stroke-width', 2)
+      .attr('class', 'hover:stroke-foreground/50');
+
     // Draw labels
-    const label = g.append('g')
-      .selectAll('text')
-      .data(nodes)
-      .join('text')
+    node.append('text')
       .text(d => d.label)
       .attr('font-size', '10px')
       .attr('dx', 12)
@@ -143,19 +191,16 @@ export function KnowledgeGraph() {
       .attr('class', 'fill-foreground/80 pointer-events-none font-medium');
 
     simulation.on('tick', () => {
+      nodes.forEach(clampNodePosition);
+
       link
-        .attr('x1', (d: any) => d.source.x)
-        .attr('y1', (d: any) => d.source.y)
-        .attr('x2', (d: any) => d.target.x)
-        .attr('y2', (d: any) => d.target.y);
+        .attr('x1', d => typeof d.source === 'object' ? d.source.x ?? 0 : 0)
+        .attr('y1', d => typeof d.source === 'object' ? d.source.y ?? 0 : 0)
+        .attr('x2', d => typeof d.target === 'object' ? d.target.x ?? 0 : 0)
+        .attr('y2', d => typeof d.target === 'object' ? d.target.y ?? 0 : 0);
 
       node
-        .attr('cx', (d: any) => d.x)
-        .attr('cy', (d: any) => d.y);
-
-      label
-        .attr('x', (d: any) => d.x)
-        .attr('y', (d: any) => d.y);
+        .attr('transform', d => `translate(${d.x ?? 0},${d.y ?? 0})`);
     });
 
     return () => {
@@ -197,7 +242,7 @@ export function KnowledgeGraph() {
             <p>Your mind map is growing. Write more entries to see the connections form.</p>
           </div>
         ) : (
-          <svg className="w-full h-[500px] cursor-grab active:cursor-grabbing" />
+          <svg className="w-full h-[500px]" />
         )}
 
         {/* Legend */}
