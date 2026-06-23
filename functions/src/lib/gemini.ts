@@ -106,3 +106,52 @@ export async function generateEmbedding(text: string): Promise<number[]> {
     throw new Error('GeminiEmbeddingGenerationError: Unknown error occurred.');
   }
 }
+
+/**
+ * Generates text from an audio input using Gemini's multimodal capabilities.
+ * Used for voice-note transcription (YGG-97).
+ *
+ * @param audioBase64 - Base64-encoded audio data.
+ * @param mimeType - MIME type of the audio (e.g. 'audio/webm', 'audio/mp4').
+ * @param prompt - The text prompt to accompany the audio.
+ * @param options - Optional configuration for the model.
+ * @returns The generated text string.
+ */
+export async function generateFromAudio(
+  audioBase64: string,
+  mimeType: string,
+  prompt: string,
+  options?: GenerateTextOptions
+): Promise<string> {
+  const modelName = options?.model || DEFAULT_MODEL;
+
+  try {
+    const generativeModel = getGenAI().getGenerativeModel({
+      model: modelName,
+      systemInstruction: options?.systemInstruction,
+      generationConfig: {
+        temperature: options?.temperature ?? 0.1, // Low temperature for faithful transcription
+        maxOutputTokens: options?.maxOutputTokens,
+        responseMimeType: options?.responseMimeType,
+      },
+    });
+
+    const result = await generativeModel.generateContent([
+      { inlineData: { data: audioBase64, mimeType } },
+      { text: prompt },
+    ]);
+    const responseText = result.response.text();
+
+    if (responseText) {
+      return responseText;
+    }
+
+    throw new Error('Gemini API returned an empty response for audio input.');
+  } catch (error) {
+    logger.error('Error generating text from audio with Gemini:', error);
+    if (error instanceof Error) {
+      throw new Error(`GeminiAudioGenerationError: ${error.message}`);
+    }
+    throw new Error('GeminiAudioGenerationError: Unknown error occurred.');
+  }
+}

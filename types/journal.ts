@@ -28,6 +28,7 @@ export interface JournalEntry {
   analysisError?: string;
   embedding?: any; // FirebaseFirestore.VectorValue (using any for cross-platform compatibility)
   embeddingGeneratedAt?: any; // FirebaseFirestore.Timestamp
+  voiceNoteUrl?: string; // Storage path to the original voice recording (YGG-97)
 }
 
 export interface AnalysisEntity {
