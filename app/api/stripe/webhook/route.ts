@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { stripe } from '@/lib/stripe/client';
+import { getStripe } from '@/lib/stripe/client';
 import { adminDb } from '@/lib/firebase/admin';
 import type { UserProfile } from '@/types/user';
 import { logSubscriptionCancelled, logSubscriptionRenewed, logSubscriptionStarted } from '@/lib/analytics/server';
@@ -27,6 +27,7 @@ export async function POST(req: Request) {
   try {
     const raw = await req.arrayBuffer();
     const body = Buffer.from(raw);
+    const stripe = getStripe();
     event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Webhook verification failed';
