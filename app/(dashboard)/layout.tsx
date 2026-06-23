@@ -102,9 +102,9 @@ export default function DashboardLayout({
   ];
 
   return (
-    <div className="min-h-screen flex bg-background text-foreground font-sans">
+    <div className="h-screen flex bg-background text-foreground font-sans overflow-hidden">
       {/* Desktop Left Sidebar Navigation */}
-      <aside className="hidden md:flex flex-col w-[220px] bg-surface border-r border-border min-h-screen shrink-0">
+      <aside className="hidden md:flex flex-col w-[220px] bg-surface border-r border-border h-full shrink-0">
         {/* Wordmark and logo */}
         <div className="h-16 px-6 flex items-center gap-2.5 border-b border-border/40">
           <svg className="w-5.5 h-5.5 text-gold" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
@@ -167,7 +167,7 @@ export default function DashboardLayout({
       </aside>
 
       {/* Main Layout Area */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+      <div className="flex-1 flex flex-col min-w-0 h-full">
         {/* Mobile Header Bar */}
         <header className="md:hidden h-14 bg-surface border-b border-border px-4 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">

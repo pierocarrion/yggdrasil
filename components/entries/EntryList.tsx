@@ -68,7 +68,8 @@ export function EntryList() {
       setHasMore(true);
       fetchEntries(true);
     }
-  }, [user, fetchEntries]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   if (!user) return null;
 

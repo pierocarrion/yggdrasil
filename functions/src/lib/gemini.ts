@@ -22,8 +22,8 @@ function getGenAI(): GoogleGenerativeAI {
 /**
  * Default models as specified by LAU-AI-01 requirements.
  */
-export const DEFAULT_MODEL = 'gemini-2.0-flash';
-export const DEFAULT_EMBEDDING_MODEL = 'gemini-embedding-exp';
+export const DEFAULT_MODEL = 'gemini-3.5-flash';
+export const DEFAULT_EMBEDDING_MODEL = 'gemini-embedding-001';
 
 /**
  * Configuration options for generating content.
@@ -60,7 +60,7 @@ export async function generateText(prompt: string, options?: GenerateTextOptions
         maxOutputTokens: options?.maxOutputTokens,
         responseMimeType: options?.responseMimeType,
       },
-    });
+    }, { apiVersion: 'v1alpha' });
 
     const result = await generativeModel.generateContent(prompt);
     const responseText = result.response.text();
@@ -87,13 +87,14 @@ export async function generateText(prompt: string, options?: GenerateTextOptions
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
   try {
-    const embeddingModel = getGenAI().getGenerativeModel({
-      model: DEFAULT_EMBEDDING_MODEL,
-    });
+    const embeddingModel = getGenAI().getGenerativeModel(
+      { model: DEFAULT_EMBEDDING_MODEL }
+    );
 
     const result = await embeddingModel.embedContent(text);
     if (result.embedding?.values) {
-      return result.embedding.values;
+      // Truncate to 768 dimensions via MRL as requested by the user
+      return result.embedding.values.slice(0, 768);
     }
     
     throw new Error('Embedding values were empty in response.');

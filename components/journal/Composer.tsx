@@ -3,16 +3,31 @@
 import React, { useRef, useEffect, useState } from "react";
 import { EntryTypeSelector, type EntryType } from "./EntryTypeSelector";
 import { MoodSliders, type MoodState } from "./MoodSliders";
-import { createEntry } from "@/lib/entries";
+import { createEntry, updateEntry } from "@/lib/entries";
 import { auth } from "@/lib/firebase/client";
 import { logEntryCreated } from "@/lib/analytics/client";
 import { ThinkingIndicator } from "./ThinkingIndicator";
+import { toast } from "sonner";
+import type { JournalEntry } from "@/types/journal";
 
-export function Composer() {
+export interface ComposerProps {
+  initialEntry?: JournalEntry;
+  onSave?: (entryId: string) => void;
+}
+
+export function Composer({ initialEntry, onSave }: ComposerProps = {}) {
   const editorRef = useRef<HTMLDivElement>(null);
-  const [content, setContent] = useState("");
-  const [entryType, setEntryType] = useState<EntryType>(null);
-  const [mood, setMood] = useState<MoodState | null>(null);
+  const [content, setContent] = useState(initialEntry?.content || "");
+  const [entryType, setEntryType] = useState<EntryType>(
+    initialEntry?.entryType 
+      ? (initialEntry.entryType.charAt(0).toUpperCase() + initialEntry.entryType.slice(1).toLowerCase() as EntryType)
+      : null
+  );
+  const [mood, setMood] = useState<MoodState | null>(
+    initialEntry?.moodLabel 
+      ? { label: initialEntry.moodLabel, polarity: initialEntry.moodPolarity || 5, intensity: initialEntry.moodIntensity || 5 }
+      : null
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'error'>('idle');
   const [pendingEntryId, setPendingEntryId] = useState<string | null>(null);
@@ -20,9 +35,12 @@ export function Composer() {
   useEffect(() => {
     // Focus on mount so user can start typing immediately
     if (editorRef.current) {
+      if (initialEntry) {
+        editorRef.current.innerHTML = initialEntry.content;
+      }
       editorRef.current.focus();
     }
-  }, []);
+  }, [initialEntry]);
 
   const handleCommand = (command: string) => {
     document.execCommand(command, false, undefined);
@@ -44,38 +62,57 @@ export function Composer() {
     setSaveStatus('saving');
 
     try {
-      const entryId = await createEntry({
-        userId: auth.currentUser.uid,
-        content,
-        entryType,
-        mood
-      });
+      let entryId: string;
       
-      // Calculate basic word count for analytics
-      // Strip HTML tags for word count
-      const textContent = content.replace(/<[^>]*>?/gm, ' ');
-      const wordCount = textContent.trim().split(/\s+/).filter(Boolean).length;
-      
-      logEntryCreated({
-        entry_type: entryType ?? undefined,
-        has_mood: !!mood,
-        tag_count: 0,
-        word_count: wordCount
-      });
-
-      // Clear composer
-      setContent("");
-      if (editorRef.current) {
-        editorRef.current.innerHTML = "";
+      if (initialEntry) {
+        await updateEntry(auth.currentUser.uid, initialEntry.id, {
+          content,
+          entryType,
+          mood
+        });
+        entryId = initialEntry.id;
+        toast.success("Entry updated successfully");
+      } else {
+        entryId = await createEntry({
+          userId: auth.currentUser.uid,
+          content,
+          entryType,
+          mood
+        });
+        toast.success("Entry saved successfully");
+        
+        // Calculate basic word count for analytics
+        const textContent = content.replace(/<[^>]*>?/gm, ' ');
+        const wordCount = textContent.trim().split(/\s+/).filter(Boolean).length;
+        
+        logEntryCreated({
+          entry_type: entryType ?? undefined,
+          has_mood: !!mood,
+          tag_count: 0,
+          word_count: wordCount
+        });
       }
-      setEntryType(null);
-      setMood(null);
+
+      // Clear composer if creating new
+      if (!initialEntry) {
+        setContent("");
+        if (editorRef.current) {
+          editorRef.current.innerHTML = "";
+        }
+        setEntryType(null);
+        setMood(null);
+      }
       
       setSaveStatus('idle');
       setPendingEntryId(entryId);
+      
+      if (onSave) {
+        onSave(entryId);
+      }
     } catch (error) {
       console.error('Failed to save entry:', error);
       setSaveStatus('error');
+      toast.error('Failed to save entry');
     } finally {
       setIsSaving(false);
     }

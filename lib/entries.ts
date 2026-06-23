@@ -55,3 +55,47 @@ export async function createEntry(payload: CreateEntryPayload): Promise<string> 
 
   return entryId;
 }
+
+export async function updateEntry(
+  userId: string,
+  entryId: string,
+  payload: Partial<CreateEntryPayload>
+): Promise<void> {
+  const { content, entryType, mood } = payload;
+  const entryRef = doc(db, `users/${userId}/entries/${entryId}`);
+  
+  const updateData: Record<string, any> = {
+    updatedAt: serverTimestamp(),
+  };
+
+  if (content !== undefined) {
+    updateData.content = content;
+    // Re-trigger analysis when content changes
+    updateData.analysisStatus = 'pending';
+  }
+
+  if (entryType !== undefined) {
+    updateData.entryType = entryType === null ? null : entryType;
+  }
+
+  if (mood !== undefined) {
+    if (mood === null || mood.label === 'Unset') {
+      updateData.moodPolarity = null;
+      updateData.moodIntensity = null;
+      updateData.moodLabel = null;
+    } else {
+      updateData.moodPolarity = mood.polarity;
+      updateData.moodIntensity = mood.intensity;
+      updateData.moodLabel = mood.label;
+    }
+  }
+
+  await setDoc(entryRef, updateData, { merge: true });
+}
+
+import { deleteDoc } from 'firebase/firestore';
+
+export async function deleteEntry(userId: string, entryId: string): Promise<void> {
+  const entryRef = doc(db, `users/${userId}/entries/${entryId}`);
+  await deleteDoc(entryRef);
+}

@@ -1,12 +1,16 @@
 'use client';
 
-import { use, useEffect } from 'react';
+import { use, useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useFirestore, useFirestoreDoc } from '@/hooks/useFirestore';
 import { useRouter } from 'next/navigation';
-import { limit } from 'firebase/firestore';
+import { limit, updateDoc, doc } from 'firebase/firestore';
+import { db } from '@/lib/firebase/client';
+import { deleteEntry } from '@/lib/entries';
 import type { JournalEntry, EntryAnalysis } from '@/types/journal';
 import { InsightCard } from '@/components/insights/InsightCard';
+import { Composer } from '@/components/journal/Composer';
+import { toast } from 'sonner';
 
 interface EntryPageProps {
   params: Promise<{ entryId: string }>;
@@ -19,6 +23,41 @@ export default function EntryPage({ params }: EntryPageProps) {
   // Use React.use to unwrap the Promise
   const resolvedParams = use(params);
   const entryId = resolvedParams.entryId;
+  const [retrying, setRetrying] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [prevAnalysisStatus, setPrevAnalysisStatus] = useState<string | null>(null);
+
+  const handleRetry = async () => {
+    if (!user || !entryId) return;
+    setRetrying(true);
+    try {
+      await updateDoc(doc(db, `users/${user.uid}/entries/${entryId}`), {
+        analysisStatus: 'pending',
+        analysisError: null,
+      });
+    } catch (err) {
+      console.error("Failed to retry analysis:", err);
+    } finally {
+      setRetrying(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!user || !entryId) return;
+    if (!window.confirm("Are you sure you want to delete this entry? This cannot be undone.")) return;
+    
+    setIsDeleting(true);
+    try {
+      await deleteEntry(user.uid, entryId);
+      toast.success("Entry deleted");
+      router.push('/journal');
+    } catch (err) {
+      console.error("Failed to delete entry:", err);
+      toast.error("Failed to delete entry");
+      setIsDeleting(false);
+    }
+  };
 
   const entryPath = user ? `users/${user.uid}/entries/${entryId}` : '';
   const analysisPath = user ? `users/${user.uid}/entries/${entryId}/analysis` : '';
@@ -38,6 +77,15 @@ export default function EntryPage({ params }: EntryPageProps) {
       console.error('Error fetching entry:', entryError);
     }
   }, [entryError]);
+
+  useEffect(() => {
+    if (entry) {
+      if (prevAnalysisStatus === 'pending' && entry.analysisStatus === 'complete') {
+        toast.success("Yggdrasil has finished analyzing your entry");
+      }
+      setPrevAnalysisStatus(entry.analysisStatus || null);
+    }
+  }, [entry?.analysisStatus, prevAnalysisStatus, entry]);
 
   if (!user) return null; // Let the auth layout handle redirect
   
@@ -67,18 +115,55 @@ export default function EntryPage({ params }: EntryPageProps) {
 
   return (
     <div className="max-w-3xl mx-auto py-12 px-4 sm:px-6 space-y-12">
-      {/* Back Button */}
-      <button 
-        onClick={() => router.push('/journal')}
-        className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
-      >
-        <span>←</span> Back to Journal
-      </button>
+      {/* Header Actions */}
+      <div className="flex items-center justify-between">
+        <button 
+          onClick={() => router.push('/journal')}
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
+        >
+          <span>←</span> Back to Journal
+        </button>
+        {!isEditing && (
+          <div className="flex items-center gap-4 text-sm">
+            <button 
+              onClick={() => setIsEditing(true)}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Edit
+            </button>
+            <button 
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="text-red-400/80 hover:text-red-400 transition-colors disabled:opacity-50"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </button>
+          </div>
+        )}
+      </div>
 
-      {/* Entry Content */}
-      <article className="prose prose-invert prose-p:text-foreground/90 prose-p:leading-relaxed max-w-none">
-        <div className="flex items-center gap-3 mb-6 text-sm text-muted-foreground">
-          <time dateTime={new Date(entry.createdAt).toISOString()}>
+      {isEditing ? (
+        <div>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-display text-foreground">Edit Entry</h2>
+            <button 
+              onClick={() => setIsEditing(false)}
+              className="text-sm text-muted-foreground hover:text-foreground"
+            >
+              Cancel
+            </button>
+          </div>
+          <Composer 
+            initialEntry={entry} 
+            onSave={() => setIsEditing(false)} 
+          />
+        </div>
+      ) : (
+        <>
+          {/* Entry Content */}
+          <article className="prose prose-invert prose-p:text-foreground/90 prose-p:leading-relaxed max-w-none">
+            <div className="flex items-center gap-3 mb-6 text-sm text-muted-foreground">
+          <time dateTime={new Date(entry.createdAt).toISOString()} suppressHydrationWarning>
             {new Date(entry.createdAt).toLocaleDateString(undefined, { 
               weekday: 'long', 
               year: 'numeric', 
@@ -113,8 +198,19 @@ export default function EntryPage({ params }: EntryPageProps) {
 
         {entry.analysisStatus === 'error' && (
           <div className="p-6 bg-red-900/10 border border-red-900/20 rounded-xl text-center">
-            <p className="text-red-400">There was an issue reflecting on this entry.</p>
-            <p className="text-sm text-red-400/70 mt-2">The system will safely retry this later.</p>
+            <p className="text-red-400 mb-2">There was an issue reflecting on this entry.</p>
+            <button 
+              onClick={handleRetry}
+              disabled={retrying}
+              className="px-4 py-2 bg-red-900/40 hover:bg-red-900/60 text-red-200 text-sm rounded transition-colors disabled:opacity-50"
+            >
+              {retrying ? 'Retrying...' : 'Retry Analysis'}
+            </button>
+            {entry.analysisError && (
+              <p className="text-xs text-red-400/80 mt-4 p-3 bg-red-900/20 rounded font-mono text-left overflow-x-auto whitespace-pre-wrap border border-red-900/30">
+                {entry.analysisError}
+              </p>
+            )}
           </div>
         )}
 
@@ -122,6 +218,8 @@ export default function EntryPage({ params }: EntryPageProps) {
           <InsightCard analysis={analysis} />
         )}
       </div>
+        </>
+      )}
     </div>
   );
 }
