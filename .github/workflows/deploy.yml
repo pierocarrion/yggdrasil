@@ -42,6 +42,8 @@ jobs:
             --max-instances=10
             --memory=1Gi
             --port=8080
+            --set-secrets=FIREBASE_ADMIN_PRIVATE_KEY=FIREBASE_ADMIN_PRIVATE_KEY:latest,GEMINI_API_KEY=GEMINI_API_KEY:latest,STRIPE_SECRET_KEY=STRIPE_SECRET_KEY:latest,STRIPE_WEBHOOK_SECRET=STRIPE_WEBHOOK_SECRET:latest,STRIPE_PUBLISHABLE_KEY=STRIPE_PUBLISHABLE_KEY:latest,GA4_API_SECRET=GA4_API_SECRET:latest
+            --set-env-vars=FIREBASE_ADMIN_PROJECT_ID=yggdrasil-497923,FIREBASE_ADMIN_CLIENT_EMAIL=firebase-adminsdk-fbsvc@yggdrasil-497923.iam.gserviceaccount.com,NEXT_PUBLIC_APP_URL=https://yggdrasil-497923.web.app,GA4_MEASUREMENT_ID=G-GZZD2WH17Y,VERTEX_AI_PROJECT=yggdrasil-497923,VERTEX_AI_LOCATION=us-central1,CIRQ_ENABLED=true,GEMINI_MODEL_DEFAULT=gemini-2.0-flash,GEMINI_MODEL_PRO=gemini-2.0-pro,GEMINI_MODEL_EMBEDDING=gemini-embedding-exp,STRIPE_PRICE_ID_PRO=price_1TcyK4BXR2mfDeCuuoX4DAcZ,STRIPE_PRICE_ID_ANNUAL=price_1TcyK4BXR2mfDeCuVDwY9mD7
 
       - name: Output Service URL
         run: echo "Deployed Service URL ${{ steps.deploy-cloudrun.outputs.url }}"
