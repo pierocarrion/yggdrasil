@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Yggdrasil
+
+Yggdrasil is a modern, AI-powered journaling application designed to help users reflect deeply and uncover patterns in their thoughts, emotions, and habits over time. It goes beyond a simple text editor by incorporating semantic search, mood tracking, and visual analytics.
+
+## Key Features
+
+- **Intelligent Journaling:** Write or dictate entries. Yggdrasil automatically extracts themes, calculates word counts, and tracks your daily reflections.
+- **Voice Notes & Transcription:** Record voice notes directly in the app. Yggdrasil uses Google Gemini for accurate speech-to-text transcription.
+- **Knowledge Graph & Clustering:** Visualize the connections between your journal entries. Using D3.js and K-Means clustering, the app groups semantically similar entries together, allowing you to visually explore recurring themes.
+- **Emotional Patterns:** Track how your mood fluctuates over time with an interactive Scatter Timeline, highlighting emotional trends.
+- **Streak Calendar & Heatmaps:** Build consistency with a 52-week streak calendar and day/time heatmaps that show when you are most reflective.
+- **AI-Powered Insights (Gemini):** Yggdrasil's backend uses Google Gemini to generate semantic embeddings for entries, perform emotional sentiment analysis, and uncover deep personal insights.
+
+## Tech Stack
+
+- **Frontend:** Next.js (App Router, Turbopack), React, Tailwind CSS
+- **Visualizations:** D3.js (Force-directed graphs, SVGs)
+- **Backend/Database:** Firebase (Firestore, Cloud Functions, Authentication)
+- **AI Integration:** Google Gemini API
+- **Payments:** Stripe
 
 ## Getting Started
 
-First, run the development server:
+First, install dependencies and run the development server:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Make sure you have your `.env.local` configured with the necessary Firebase and Stripe credentials.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Historical Changelog
 
-## Learn More
+- **v1.2.0 - UI Enhancements & Stability**
+  - Resolved merge conflicts and stabilized D3 force-directed graph rendering.
+  - Implemented bulletproof coordinate clamping (preventing `NaN` layout explosion bugs in the Knowledge Graph).
+  - Merged conflicting payload definitions for `wordCount` and `entryDate` in Firestore creation endpoints.
+  - Fixed linting and strict type errors across `KnowledgeGraph.tsx` and `ClusterMap.tsx`.
 
-To learn more about Next.js, take a look at the following resources:
+- **v1.1.0 - Emotion Timeline & Clustering**
+  - Added the new Emotional Patterns Scatter Timeline, replacing the legacy line chart.
+  - Implemented K-Means clustering for grouping entries by semantic similarity on the dashboard.
+  - Refined Streak Calendar to include daily and time-of-day heatmaps.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **v1.0.0 - Semantic Search & Voice**
+  - Integrated Gemini API to generate semantic embeddings for all new journal entries.
+  - Built out the interactive Knowledge Graph using D3 force simulations.
+  - Added in-browser voice recording with automatic transcription via Firebase Cloud Functions.
+  - Added robust Firestore security rules.

@@ -236,7 +236,7 @@ export function KnowledgeGraph() {
       .join('g')
       .attr('data-graph-node', 'true')
       .attr('class', (d: any) => {
-        let baseClass = 'cursor-pointer transition-all hover:opacity-80 focus:outline-none';
+        const baseClass = 'cursor-pointer transition-all hover:opacity-80 focus:outline-none';
         return isNewNode(d) ? `${baseClass} animate-in zoom-in fade-in duration-1000` : baseClass;
       })
       .style('animation-fill-mode', 'both')
