@@ -23,11 +23,15 @@ export interface JournalEntry {
   tags: string[];
   wordCount: number;
   createdAt: number;
+  entryDate?: number; // Narrative date of the entry
   updatedAt: number;
   analysisStatus?: 'pending' | 'complete' | 'error';
   analysisError?: string;
+  analysis?: EntryAnalysis;
+  insightGated?: boolean;
   embedding?: any; // FirebaseFirestore.VectorValue (using any for cross-platform compatibility)
   embeddingGeneratedAt?: any; // FirebaseFirestore.Timestamp
+  voiceNoteUrl?: string; // Storage path to the original voice recording (YGG-97)
 }
 
 export interface AnalysisEntity {

@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
 import { EntryTypeSelector, type EntryType } from "./EntryTypeSelector";
 import { MoodSliders, type MoodState } from "./MoodSliders";
+import { VoiceRecorder } from "./VoiceRecorder";
 import { createEntry, updateEntry } from "@/lib/entries";
 import { auth } from "@/lib/firebase/client";
 import { logEntryCreated } from "@/lib/analytics/client";
@@ -17,6 +18,7 @@ export interface ComposerProps {
 
 export function Composer({ initialEntry, onSave }: ComposerProps = {}) {
   const editorRef = useRef<HTMLDivElement>(null);
+  const [title, setTitle] = useState(initialEntry?.title || "");
   const [content, setContent] = useState(initialEntry?.content || "");
   const [entryType, setEntryType] = useState<EntryType>(() => {
     const entryTypeMap: Record<string, NonNullable<EntryType>> = {
@@ -43,16 +45,41 @@ export function Composer({ initialEntry, onSave }: ComposerProps = {}) {
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'error'>('idle');
   const [pendingEntryId, setPendingEntryId] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [voiceNoteStoragePath, setVoiceNoteStoragePath] = useState<string | null>(null);
+
+  const getLocalDatetimeString = (date: Date) => {
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
+
+  const [entryDateStr, setEntryDateStr] = useState(
+    initialEntry?.entryDate 
+      ? getLocalDatetimeString(new Date(initialEntry.entryDate))
+      : getLocalDatetimeString(new Date())
+  );
 
   useEffect(() => {
-    // Focus on mount so user can start typing immediately
-    if (editorRef.current) {
-      if (initialEntry) {
-        editorRef.current.innerHTML = initialEntry.content;
-      }
+    // Re-initialize the contentEditable when returning from recording or on first mount
+    if (!isRecording && editorRef.current) {
+      editorRef.current.innerHTML = content;
       editorRef.current.focus();
+      
+      // Move cursor to the end of the text
+      try {
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(editorRef.current);
+        range.collapse(false);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+      } catch (e) {
+        // Ignore selection errors
+      }
     }
-  }, [initialEntry]);
+    // We intentionally only run this when transitioning between recording states
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRecording]);
 
   const handleCommand = (command: string) => {
     document.execCommand(command, false, undefined);
@@ -67,6 +94,31 @@ export function Composer({ initialEntry, onSave }: ComposerProps = {}) {
     }
   };
 
+  const handleTranscriptReady = useCallback((transcript: string, storagePath: string) => {
+    // Convert plain text transcript into HTML paragraphs for the contentEditable
+    const htmlContent = transcript
+      .split(/\n\n+/)
+      .filter(Boolean)
+      .map((p) => `<p>${p.trim()}</p>`)
+      .join("");
+
+    // Append to existing content using state callback
+    setContent((prev) => {
+      if (prev.trim()) {
+        return prev + "<br>" + htmlContent;
+      }
+      return htmlContent;
+    });
+
+    setVoiceNoteStoragePath(storagePath);
+    setIsRecording(false);
+    toast.success("Voice note transcribed!");
+  }, []);
+
+  const handleRecordingCancel = useCallback(() => {
+    setIsRecording(false);
+  }, []);
+
   const handleSave = async () => {
     if (!content.trim() || !auth.currentUser) return;
     
@@ -80,20 +132,24 @@ export function Composer({ initialEntry, onSave }: ComposerProps = {}) {
       
       if (initialEntry) {
         await updateEntry(auth.currentUser.uid, initialEntry.id, {
+          title: title.trim() || undefined,
           content,
           entryType,
           mood,
-          wordCount
+          wordCount,
+          entryDate: new Date(entryDateStr).getTime()
         });
         entryId = initialEntry.id;
         toast.success("Entry updated successfully");
       } else {
         entryId = await createEntry({
           userId: auth.currentUser.uid,
+          title: title.trim() || undefined,
           content,
           entryType,
           mood,
-          wordCount
+          wordCount,
+          entryDate: new Date(entryDateStr).getTime()
         });
         toast.success("Entry saved successfully");
         
@@ -107,12 +163,14 @@ export function Composer({ initialEntry, onSave }: ComposerProps = {}) {
 
       // Clear composer if creating new
       if (!initialEntry) {
+        setTitle("");
         setContent("");
         if (editorRef.current) {
           editorRef.current.innerHTML = "";
         }
         setEntryType(null);
         setMood(null);
+        setEntryDateStr(getLocalDatetimeString(new Date()));
       }
       
       setSaveStatus('idle');
@@ -155,17 +213,71 @@ export function Composer({ initialEntry, onSave }: ComposerProps = {}) {
         >
           <span className="text-lg leading-none text-sage">•</span> List
         </button>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Mic button */}
+        <button
+          onClick={() => setIsRecording(true)}
+          disabled={isRecording}
+          className="px-3 py-1.5 rounded-sm hover:bg-sage/15 text-sm transition-colors text-sage hover:text-sage flex items-center gap-1.5 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          title="Record a voice note"
+        >
+          <svg
+            className="w-4 h-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="9" y="1" width="6" height="12" rx="3" />
+            <path d="M5 10a7 7 0 0 0 14 0" />
+            <line x1="12" y1="17" x2="12" y2="21" />
+            <line x1="8" y1="21" x2="16" y2="21" />
+          </svg>
+          Voice
+        </button>
       </div>
 
-      {/* Editor Area */}
-      <div
-        ref={editorRef}
-        className="flex-1 p-8 outline-none overflow-y-auto text-body-lg leading-relaxed text-foreground bg-transparent
-                   empty:before:content-[attr(data-placeholder)] empty:before:text-foreground/30 empty:before:pointer-events-none empty:before:block"
-        contentEditable
-        onInput={handleInput}
-        data-placeholder="Write your entry here..."
-      />
+      {/* Editor Area or Voice Recorder */}
+      {isRecording ? (
+        <div className="flex-1 flex items-center justify-center">
+          <VoiceRecorder
+            onTranscriptReady={handleTranscriptReady}
+            onCancel={handleRecordingCancel}
+          />
+        </div>
+      ) : (
+        <div className="flex-1 flex flex-col">
+          <div className="px-8 pt-8 pb-1 flex items-center">
+            <input
+              type="datetime-local"
+              value={entryDateStr}
+              onChange={(e) => setEntryDateStr(e.target.value)}
+              className="bg-transparent text-sm text-muted-foreground/80 outline-none hover:text-muted-foreground transition-colors cursor-pointer"
+              title="Date of the entry"
+            />
+          </div>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Untitled Entry"
+            className="w-full bg-transparent px-8 pt-1 pb-4 text-2xl sm:text-3xl font-display text-foreground placeholder:text-muted-foreground/40 outline-none"
+          />
+          <div
+            ref={editorRef}
+            className="flex-1 px-8 pb-8 outline-none overflow-y-auto text-body-lg leading-relaxed text-foreground bg-transparent
+                       empty:before:content-[attr(data-placeholder)] empty:before:text-foreground/30 empty:before:pointer-events-none empty:before:block"
+            contentEditable
+            onInput={handleInput}
+            data-placeholder="Write your entry here..."
+          />
+        </div>
+      )}
 
       {/* Post-Composer Options */}
       <div className="px-8 pb-8 flex flex-col gap-6">

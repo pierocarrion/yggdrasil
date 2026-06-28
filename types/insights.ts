@@ -1,7 +1,9 @@
 export interface Connection {
   id: string;
-  entryIdA: string;
-  entryIdB: string;
+  sourceId: string;
+  targetId: string;
+  weak?: boolean;
+  theme?: string;
   score: number; // 0–1
   reason: string;
   computedVia: 'cirq' | 'fallback_knn';

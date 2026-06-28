@@ -19,28 +19,28 @@ export async function GET(request: Request) {
 
     const entriesSnapshot = await adminDb.collection('users').doc(userId).collection('entries').get();
     
-    const entries = await Promise.all(entriesSnapshot.docs.map(async doc => {
+    const entries = entriesSnapshot.docs.map(doc => {
       const data = doc.data();
-      
-      // Fetch analysis from subcollection
-      const analysisSnap = await adminDb.collection('users').doc(userId)
-        .collection('entries').doc(doc.id)
-        .collection('analysis').limit(1).get();
-        
-      const analysis = analysisSnap.empty ? undefined : analysisSnap.docs[0].data();
-
       return {
         ...data,
         id: doc.id,
-        analysis
+        analysis: data.analysis
       } as (JournalEntry & { analysis?: EntryAnalysis });
-    }));
+    });
 
-    const graphData = buildKnowledgeGraph(entries, tier);
+    // Fetch pre-computed backend clusters
+    const clustersSnap = await adminDb.collection('users').doc(userId).collection('graphMetadata').doc('clusters').get();
+    const backendClusters = clustersSnap.exists ? clustersSnap.data()?.clusters || [] : [];
 
+    const graphData = buildKnowledgeGraph(entries, tier, backendClusters);
+
+    // graphData is created from scratch as POJOs, no need for Timestamp checking which can throw
     return NextResponse.json(graphData);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Knowledge Graph API Error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Internal Server Error', 
+      details: error.stack || error.toString() 
+    }, { status: 500 });
   }
 }

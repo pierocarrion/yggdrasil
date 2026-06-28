@@ -4,6 +4,7 @@ import * as admin from 'firebase-admin';
 admin.initializeApp();
 
 export { analyzeEntry } from './gemini/analyzeEntry';
+export { transcribeAudio } from './gemini/transcribeAudio';
 export { computeHiddenConnections } from './insights/hiddenConnections';
 export { yggiChat } from './yggi/chat';
 export { generateWeeklyReport } from './reports/weeklyReport';

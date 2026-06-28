@@ -60,17 +60,19 @@ export default function EntryPage({ params }: EntryPageProps) {
   };
 
   const entryPath = user ? `users/${user.uid}/entries/${entryId}` : '';
-  const analysisPath = user ? `users/${user.uid}/entries/${entryId}/analysis` : '';
-
   const { data: entry, loading: entryLoading, error: entryError } = useFirestoreDoc<JournalEntry>(entryPath);
+
+  // Only query the subcollection if the analysis isn't already stored inline on the entry document
+  const shouldFetchSubcollection = entry && !entry.analysis && user;
+  const analysisPath = shouldFetchSubcollection ? `users/${user.uid}/entries/${entryId}/analysis` : '';
   
-  // Query analysis subcollection (there should only be one document)
+  // Query analysis subcollection (fallback for older entries)
   const { data: analysisDocs, loading: analysisLoading } = useFirestore<EntryAnalysis>(
     analysisPath,
     limit(1)
   );
 
-  const analysis = analysisDocs && analysisDocs.length > 0 ? analysisDocs[0] : null;
+  const analysis = entry?.analysis || (analysisDocs && analysisDocs.length > 0 ? analysisDocs[0] : null);
 
   useEffect(() => {
     if (entryError) {
@@ -163,8 +165,8 @@ export default function EntryPage({ params }: EntryPageProps) {
           {/* Entry Content */}
           <article className="prose prose-invert prose-p:text-foreground/90 prose-p:leading-relaxed max-w-none">
             <div className="flex items-center gap-3 mb-6 text-sm text-muted-foreground">
-          <time dateTime={new Date(entry.createdAt).toISOString()} suppressHydrationWarning>
-            {new Date(entry.createdAt).toLocaleDateString(undefined, { 
+          <time dateTime={new Date(entry.entryDate || entry.createdAt).toISOString()} suppressHydrationWarning>
+            {new Date(entry.entryDate || entry.createdAt).toLocaleDateString(undefined, { 
               weekday: 'long', 
               year: 'numeric', 
               month: 'long', 

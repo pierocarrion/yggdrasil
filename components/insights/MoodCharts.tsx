@@ -9,6 +9,9 @@ import { JournalEntry } from '@/types/journal';
 
 type DateRange = 7 | 30 | 90 | 0; // 0 means All Time
 
+const FREQ_MARGIN = { top: 20, right: 20, bottom: 30, left: 40 };
+const SCATTER_MARGIN = { top: 30, right: 30, bottom: 40, left: 40 };
+
 export function MoodCharts() {
   const { user } = useAuth();
   const { data: entries, loading } = useFirestore<JournalEntry>(
@@ -54,7 +57,6 @@ export function MoodCharts() {
   // --- Frequency Chart Scales ---
   const freqWidth = 600;
   const freqHeight = 200;
-  const freqMargin = { top: 20, right: 20, bottom: 30, left: 40 };
 
   const xFreq = useMemo(() => {
     const dates = frequencyData.map(d => d.date);
@@ -67,31 +69,30 @@ export function MoodCharts() {
 
     return d3.scaleTime()
       .domain(domain)
-      .range([freqMargin.left, freqWidth - freqMargin.right]);
-  }, [frequencyData, freqMargin]);
+      .range([FREQ_MARGIN.left, freqWidth - FREQ_MARGIN.right]);
+  }, [frequencyData]);
 
   const yFreq = useMemo(() => {
     const maxCount = d3.max(frequencyData, d => d.count) || 5;
     return d3.scaleLinear()
       .domain([0, maxCount])
-      .range([freqHeight - freqMargin.bottom, freqMargin.top]);
-  }, [frequencyData, freqHeight, freqMargin]);
+      .range([freqHeight - FREQ_MARGIN.bottom, FREQ_MARGIN.top]);
+  }, [frequencyData, freqHeight]);
 
   // --- Scatter Plot Scales ---
   const scatterSize = 400;
-  const scatterMargin = { top: 30, right: 30, bottom: 40, left: 40 };
 
   const xScatter = useMemo(() => {
     return d3.scaleLinear()
       .domain([0, 10]) // Polarity: 0 to 10
-      .range([scatterMargin.left, scatterSize - scatterMargin.right]);
-  }, [scatterMargin]);
+      .range([SCATTER_MARGIN.left, scatterSize - SCATTER_MARGIN.right]);
+  }, [scatterSize]);
 
   const yScatter = useMemo(() => {
     return d3.scaleLinear()
       .domain([0, 10]) // Intensity: 0 to 10
-      .range([scatterSize - scatterMargin.bottom, scatterMargin.top]);
-  }, [scatterSize, scatterMargin]);
+      .range([scatterSize - SCATTER_MARGIN.bottom, SCATTER_MARGIN.top]);
+  }, [scatterSize]);
 
   const colorScale = useMemo(() => {
     // Map polarity to a diverging color scale (0 = red/negative, 5 = gray/neutral, 10 = green/blue/positive)
@@ -134,10 +135,10 @@ export function MoodCharts() {
             <svg viewBox={`0 0 ${freqWidth} ${freqHeight}`} className="w-full h-full overflow-visible">
               {/* Axes Base Lines */}
               <line 
-                x1={freqMargin.left} 
-                y1={freqHeight - freqMargin.bottom} 
-                x2={freqWidth - freqMargin.right} 
-                y2={freqHeight - freqMargin.bottom} 
+                x1={FREQ_MARGIN.left} 
+                y1={freqHeight - FREQ_MARGIN.bottom} 
+                x2={freqWidth - FREQ_MARGIN.right} 
+                y2={freqHeight - FREQ_MARGIN.bottom} 
                 stroke="currentColor" 
                 className="text-border" 
                 strokeWidth={2}
@@ -145,10 +146,10 @@ export function MoodCharts() {
 
               {/* Bars */}
               {frequencyData.map((d, i) => {
-                const barWidth = Math.max(4, (freqWidth - freqMargin.left - freqMargin.right) / (dateRange || 180) * 0.8);
+                const barWidth = Math.max(4, (freqWidth - FREQ_MARGIN.left - FREQ_MARGIN.right) / (dateRange || 180) * 0.8);
                 const xPos = xFreq(d.date) - barWidth / 2;
                 const yPos = yFreq(d.count);
-                const barHeight = freqHeight - freqMargin.bottom - yPos;
+                const barHeight = freqHeight - FREQ_MARGIN.bottom - yPos;
 
                 return (
                   <g key={i}>
@@ -188,14 +189,14 @@ export function MoodCharts() {
           <div className="w-full max-w-sm aspect-square relative">
             <svg viewBox={`0 0 ${scatterSize} ${scatterSize}`} className="w-full h-full overflow-visible">
               {/* Quadrant Backgrounds (Optional, subtle) */}
-              <rect x={scatterMargin.left} y={scatterMargin.top} width={(scatterSize-scatterMargin.left-scatterMargin.right)/2} height={(scatterSize-scatterMargin.top-scatterMargin.bottom)/2} className="fill-red-500/5 dark:fill-red-500/10" />
-              <rect x={scatterMargin.left + (scatterSize-scatterMargin.left-scatterMargin.right)/2} y={scatterMargin.top} width={(scatterSize-scatterMargin.left-scatterMargin.right)/2} height={(scatterSize-scatterMargin.top-scatterMargin.bottom)/2} className="fill-green-500/5 dark:fill-green-500/10" />
-              <rect x={scatterMargin.left} y={scatterMargin.top + (scatterSize-scatterMargin.top-scatterMargin.bottom)/2} width={(scatterSize-scatterMargin.left-scatterMargin.right)/2} height={(scatterSize-scatterMargin.top-scatterMargin.bottom)/2} className="fill-orange-500/5 dark:fill-orange-500/10" />
-              <rect x={scatterMargin.left + (scatterSize-scatterMargin.left-scatterMargin.right)/2} y={scatterMargin.top + (scatterSize-scatterMargin.top-scatterMargin.bottom)/2} width={(scatterSize-scatterMargin.left-scatterMargin.right)/2} height={(scatterSize-scatterMargin.top-scatterMargin.bottom)/2} className="fill-blue-500/5 dark:fill-blue-500/10" />
+              <rect x={SCATTER_MARGIN.left} y={SCATTER_MARGIN.top} width={(scatterSize-SCATTER_MARGIN.left-SCATTER_MARGIN.right)/2} height={(scatterSize-SCATTER_MARGIN.top-SCATTER_MARGIN.bottom)/2} className="fill-red-500/5 dark:fill-red-500/10" />
+              <rect x={SCATTER_MARGIN.left + (scatterSize-SCATTER_MARGIN.left-SCATTER_MARGIN.right)/2} y={SCATTER_MARGIN.top} width={(scatterSize-SCATTER_MARGIN.left-SCATTER_MARGIN.right)/2} height={(scatterSize-SCATTER_MARGIN.top-SCATTER_MARGIN.bottom)/2} className="fill-green-500/5 dark:fill-green-500/10" />
+              <rect x={SCATTER_MARGIN.left} y={SCATTER_MARGIN.top + (scatterSize-SCATTER_MARGIN.top-SCATTER_MARGIN.bottom)/2} width={(scatterSize-SCATTER_MARGIN.left-SCATTER_MARGIN.right)/2} height={(scatterSize-SCATTER_MARGIN.top-SCATTER_MARGIN.bottom)/2} className="fill-orange-500/5 dark:fill-orange-500/10" />
+              <rect x={SCATTER_MARGIN.left + (scatterSize-SCATTER_MARGIN.left-SCATTER_MARGIN.right)/2} y={SCATTER_MARGIN.top + (scatterSize-SCATTER_MARGIN.top-SCATTER_MARGIN.bottom)/2} width={(scatterSize-SCATTER_MARGIN.left-SCATTER_MARGIN.right)/2} height={(scatterSize-SCATTER_MARGIN.top-SCATTER_MARGIN.bottom)/2} className="fill-blue-500/5 dark:fill-blue-500/10" />
 
               {/* Axes lines */}
-              <line x1={xScatter(5)} y1={scatterMargin.top} x2={xScatter(5)} y2={scatterSize - scatterMargin.bottom} stroke="currentColor" className="text-border" strokeDasharray="4 4" />
-              <line x1={scatterMargin.left} y1={yScatter(5)} x2={scatterSize - scatterMargin.right} y2={yScatter(5)} stroke="currentColor" className="text-border" strokeDasharray="4 4" />
+              <line x1={xScatter(5)} y1={SCATTER_MARGIN.top} x2={xScatter(5)} y2={scatterSize - SCATTER_MARGIN.bottom} stroke="currentColor" className="text-border" strokeDasharray="4 4" />
+              <line x1={SCATTER_MARGIN.left} y1={yScatter(5)} x2={scatterSize - SCATTER_MARGIN.right} y2={yScatter(5)} stroke="currentColor" className="text-border" strokeDasharray="4 4" />
 
               {/* Axis Labels */}
               <text x={scatterSize / 2} y={scatterSize - 10} textAnchor="middle" className="fill-muted-foreground text-xs font-medium">Polarity (Negative → Positive)</text>

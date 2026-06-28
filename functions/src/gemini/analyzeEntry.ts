@@ -3,6 +3,8 @@ import * as admin from 'firebase-admin';
 import * as logger from 'firebase-functions/logger';
 import { logInsightGenerated } from '../lib/analytics';
 import { generateText, generateEmbedding, geminiapikey } from '../lib/gemini';
+import { computeAndSaveEdges } from './computeConnections';
+import { computeAndSaveClusters } from './computeClusters';
 
 
 
@@ -30,7 +32,10 @@ export const analyzeEntry = onDocumentWritten(
     }
 
     try {
+      logger.info(`[analyzeEntry] Starting analysis for entry: ${entryId} (User: ${userId})`);
+
       // --- Phase 1: depth scoring ---
+      logger.info(`[analyzeEntry] Phase 1: Generating depth score...`);
       const depthPrompt = `Rate the psychological and emotional richness of this journal entry on a scale of 1 to 11. Return ONLY a JSON object with a single key "depthScore" containing an integer.
 
 Score guide:
@@ -50,14 +55,18 @@ Entry:
         .replace(/```$/i, '')
         .trim();
       const { depthScore } = JSON.parse(depthText) as { depthScore: number };
+      logger.info(`[analyzeEntry] Phase 1 Complete. Depth score: ${depthScore}`);
 
       // --- Phase 2: comprehensive analysis ---
+      logger.info(`[analyzeEntry] Phase 2: Fetching user frameworks...`);
       let enabledFrameworks: string[] = [];
       if (depthScore >= 3) {
         try {
           const settingsSnap = await db.doc(`users/${userId}/settings/preferences`).get();
           enabledFrameworks = settingsSnap.data()?.enabledFrameworks ?? [];
-        } catch {
+          logger.info(`[analyzeEntry] Enabled frameworks: ${enabledFrameworks.join(', ') || 'None'}`);
+        } catch (error) {
+          logger.warn(`[analyzeEntry] Failed to fetch frameworks:`, error);
           enabledFrameworks = [];
         }
       }
@@ -73,7 +82,7 @@ Entry:
 
 Required fields:
 - "entities": [{ "type": "person"|"place"|"event"|"concept", "name": string }, ...]
-- "themes": string[] — up to 5 overarching topic phrases
+- "themes": string[] — up to 5 overarching topics. Crucial: Extract very broad, single-word or short universal concepts (e.g. "Family", "Anxiety", "Career", "Vulnerability", "Self-Worth") rather than highly specific phrases. This ensures commonality across entries.
 - "emotions": [{ "label": string, "polarity": number (0–10; 5=neutral; lower=more negative, higher=more positive), "intensity": number (0–10; 5=moderate) }, ...]
 - "keywords": string[] — significant single words or short phrases for search and tagging
 - "summary": string — 2–3 sentence neutral third-person summary of what the entry is about; no interpretation
@@ -89,12 +98,13 @@ Required fields:
 Entry (depthScore: ${depthScore}):
 "${entryData.content}"`;
 
+      logger.info(`[analyzeEntry] Phase 2: Generating comprehensive analysis and embedding concurrently...`);
       const analysisPromise = generateText(analysisPrompt, {
         responseMimeType: 'application/json',
       });
       
       const embeddingPromise = generateEmbedding(entryData.content).catch((e) => {
-        logger.error('Failed to generate embedding', { userId, entryId, error: e });
+        logger.error('[analyzeEntry] Failed to generate embedding', { userId, entryId, error: e });
         return null;
       });
 
@@ -102,23 +112,20 @@ Entry (depthScore: ${depthScore}):
         analysisPromise,
         embeddingPromise,
       ]);
+      logger.info(`[analyzeEntry] Phase 2 Complete. Both Gemini calls returned successfully.`);
 
+      logger.info(`[analyzeEntry] Parsing Gemini JSON response...`);
       const match = analysisResponse.match(/\{[\s\S]*\}/);
       const analysisText = match ? match[0] : analysisResponse;
       const analysisFields = JSON.parse(analysisText);
 
-      const batch = db.batch();
-
-      const analysisRef = db.collection(`users/${userId}/entries/${entryId}/analysis`).doc();
-      batch.set(analysisRef, {
-        entryId,
-        depthScore,
-        ...analysisFields,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-
       const entryUpdateData: any = {
         analysisStatus: 'complete',
+        analysis: {
+          depthScore,
+          ...analysisFields,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        }
       };
       
       if (embeddingValues) {
@@ -129,9 +136,17 @@ Entry (depthScore: ${depthScore}):
         entryUpdateData.embeddingError = true;
       }
 
-      batch.update(entryRef, entryUpdateData);
+      // Compute and persist similarity edges before finalizing status
+      if (embeddingValues) {
+        logger.info(`[analyzeEntry] Computing similarity edges...`);
+        await computeAndSaveEdges(userId, entryId, embeddingValues);
+        
+        logger.info(`[analyzeEntry] Recomputing clusters...`);
+        await computeAndSaveClusters(userId);
+      }
 
-      await batch.commit();
+      await entryRef.update(entryUpdateData);
+      logger.info(`[analyzeEntry] Analysis successfully saved to Firestore and status set to complete.`);
 
       logger.info('insight_generated', { userId, entryId, depthScore });
       await logInsightGenerated(userId, entryId, depthScore);
@@ -145,6 +160,9 @@ Entry (depthScore: ${depthScore}):
         status: 'success',
         depthScore
       });
+      logger.info(`[analyzeEntry] Logged to opsLogs collection.`);
+
+
 
     } catch (error) {
       logger.error('analyzeEntry failed', { userId, entryId, error });

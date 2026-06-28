@@ -46,7 +46,7 @@ export function ClusterMap() {
     const fetchMissing = async () => {
       setFetchingAnalysis(true);
       try {
-        const missing = validEntries.filter(e => !analyses[e.id]);
+        const missing = validEntries.filter(e => !e.analysis && !analyses[e.id]);
         if (missing.length === 0) {
           setFetchingAnalysis(false);
           return;
@@ -58,7 +58,8 @@ export function ClusterMap() {
           if (!snapshot.empty) {
             return { entryId: entry.id, analysis: snapshot.docs[0].data() as EntryAnalysis };
           }
-          return null;
+          // Mark as attempted even if empty, so we don't block clustering forever
+          return { entryId: entry.id, analysis: {} as EntryAnalysis };
         });
 
         const results = await Promise.all(promises);
@@ -86,11 +87,12 @@ export function ClusterMap() {
 
   // 3. Perform K-Means Clustering
   const clusters = useMemo(() => {
-    if (validEntries.length === 0 || Object.keys(analyses).length < validEntries.length) return [];
+    const isFullyLoaded = validEntries.every(e => e.analysis || analyses[e.id]);
+    if (validEntries.length === 0 || !isFullyLoaded) return [];
 
     const enrichedEntries: ClusteredEntry[] = validEntries.map(e => ({
       ...e,
-      analysis: analyses[e.id]
+      analysis: e.analysis || analyses[e.id]
     }));
 
     // Dynamic K based on entry count (between 2 and 6)
@@ -164,7 +166,7 @@ export function ClusterMap() {
           id: entry.id,
           clusterIndex: cluster.index,
           entry,
-          radius: Math.max(6, Math.min(12, (Number.isFinite(entry.wordCount) ? entry.wordCount : 0) / 50)) // size by word count
+          radius: Math.max(6, Math.min(12, ((Number.isFinite(entry.wordCount) ? entry.wordCount as number : 0) / 50))) || 6 // size by word count, fallback to 6 if NaN
         });
       });
     });

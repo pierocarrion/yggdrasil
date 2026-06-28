@@ -63,6 +63,7 @@ export function StreakCalendar() {
     // Streak Calculation
     let current = 0;
     let longest = 0;
+
     
     // Sort unique dates descending
     const uniqueDates = Array.from(dateCounts.keys()).sort((a, b) => b.localeCompare(a));

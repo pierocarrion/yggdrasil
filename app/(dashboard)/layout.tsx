@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { FamiliarPatternToast } from '@/components/insights/FamiliarPatternToast';
 
 export default function DashboardLayout({
   children,
@@ -220,6 +221,7 @@ export default function DashboardLayout({
             );
           })}
         </nav>
+        <FamiliarPatternToast />
       </div>
     </div>
   );

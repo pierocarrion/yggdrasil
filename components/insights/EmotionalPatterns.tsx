@@ -213,7 +213,7 @@ export function EmotionalPatterns() {
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-display text-foreground">Longitudinal Patterns</h3>
         <div className="flex items-center gap-4">
-          {fetchingAnalysis && <span className="text-xs text-muted-foreground animate-pulse">Analyzing timeframe...</span>}
+
           <select
             value={dateRange}
             onChange={(e) => setDateRange(Number(e.target.value) as DateRange)}

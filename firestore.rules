@@ -47,7 +47,7 @@ service cloud.firestore {
       }
       
       match /connections/{connectionId} {
-        allow read: if request.auth != null && request.auth.uid == userId && resource.data.userId == userId;
+        allow read: if request.auth != null && request.auth.uid == userId;
         allow write: if false; // Only server can write connections
       }
       
