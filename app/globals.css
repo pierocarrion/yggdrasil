@@ -17,6 +17,7 @@
   --color-gold: #C9A84C;
   --color-sage: #7BAE8A;
   --color-earth: #8B6B4A;
+  --color-dream: #8B7BAE;
   
   --color-destructive: #8B3A3A;
   --color-destructive-foreground: #E8E0D0;
@@ -67,7 +68,23 @@
     --gold: #C9A84C;
     --sage: #7BAE8A;
     --earth: #8B6B4A;
-    
+    --dream: #8B7BAE;
+    --ygg-dream: #8B7BAE;
+
+    /* Translucent accents */
+    --gold-soft: rgba(201, 168, 76, 0.10);
+    --gold-line: rgba(201, 168, 76, 0.30);
+    --sage-soft: rgba(123, 174, 138, 0.10);
+    --sage-line: rgba(123, 174, 138, 0.20);
+    --border-soft: rgba(42, 64, 53, 0.40);
+
+    /* Radii & effects */
+    --radius-card: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-full: 9999px;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
+    --ease-gentle: cubic-bezier(0.4, 0, 0.2, 1);
+
     --destructive: #8B3A3A;
     --destructive-foreground: #E8E0D0;
     
@@ -113,4 +130,64 @@
   ::-webkit-scrollbar-thumb:hover {
     background: var(--border);
   }
+}
+
+/* Marketing homepage ("The Ascent") */
+@layer components {
+  .mkt-link {
+    font-size: 14px;
+    color: rgba(232, 224, 208, 0.6);
+    text-decoration: none;
+    transition: color 300ms var(--ease-gentle);
+  }
+  .mkt-link:hover {
+    color: #E8E0D0;
+  }
+  .mkt-link-sm {
+    font-size: 13px;
+    color: rgba(232, 224, 208, 0.6);
+    text-decoration: none;
+    transition: color 300ms var(--ease-gentle);
+  }
+  .mkt-link-sm:hover {
+    color: #E8E0D0;
+  }
+  .mkt-card {
+    padding: 28px;
+    border-radius: 12px;
+    background: var(--surface-2);
+    border: 1px solid rgba(42, 64, 53, 0.6);
+    transition: border-color 400ms var(--ease-gentle), transform 400ms var(--ease-gentle);
+  }
+  .mkt-card:hover {
+    border-color: var(--gold-line);
+    transform: translateY(-4px);
+  }
+  .mkt-reset-link {
+    margin-top: 16px;
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 12px;
+    color: rgba(232, 224, 208, 0.5);
+    cursor: pointer;
+    font-family: var(--font-sans);
+    transition: color 300ms var(--ease-gentle);
+  }
+  .mkt-reset-link:hover {
+    color: #E8E0D0;
+  }
+  .mkt-spine {
+    display: none;
+  }
+  @media (min-width: 1100px) {
+    .mkt-spine {
+      display: block;
+    }
+  }
+}
+
+@keyframes ygg-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(7px); }
 }

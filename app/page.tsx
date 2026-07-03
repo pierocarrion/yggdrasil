@@ -1,6 +1,7 @@
-import { redirect } from 'next/navigation';
+import { MarketingHome } from '@/components/marketing/Home';
 
 export default function Home() {
-  // Landing / redirect to login
-  redirect('/login');
+  // Marketing homepage ("The Ascent"). Signed-in users are redirected to the
+  // app from within MarketingHome once the auth state resolves.
+  return <MarketingHome />;
 }
