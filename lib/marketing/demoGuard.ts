@@ -36,7 +36,18 @@ export function hashKey(value: string): string {
 }
 
 export function getClientIp(request: Request): string {
-  return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  // X-Forwarded-For is a client-controllable list: the caller can prepend fake
+  // entries, but cannot control the hop appended by the trusted infrastructure
+  // in front of us (Cloud Run / the load balancer). Take the LAST entry so an
+  // abuser can't rotate spoofed IPs to dodge the per-IP window. Falls back to
+  // Cloud Run's x-forwarded-for; if absent, all callers share the 'unknown'
+  // bucket (fails safe toward over-limiting rather than unlimited).
+  const forwarded = request.headers.get('x-forwarded-for');
+  if (forwarded) {
+    const hops = forwarded.split(',').map((h) => h.trim()).filter(Boolean);
+    if (hops.length > 0) return hops[hops.length - 1];
+  }
+  return 'unknown';
 }
 
 export function getDeviceId(request: Request): { id: string; isNew: boolean } {

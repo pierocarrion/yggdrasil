@@ -1,6 +1,6 @@
 # Yggdrasil — Collaborator Onboarding Guide
 
-**Last updated: June 2026**
+**Last updated: July 2026**
 **Deadline: August 17, 2026 — Build with Gemini XPRIZE**
 
 ---
@@ -8,7 +8,7 @@
 ## Table of Contents
 
 1. [Welcome & Project Context](#1-welcome--project-context)
-2. [The App](#2-the-app)
+2. [The App & What's Actually Built](#2-the-app--whats-actually-built)
 3. [Tech Stack](#3-tech-stack)
 4. [Setup: Your Development Environment](#4-setup-your-development-environment)
 5. [Codebase Structure](#5-codebase-structure)
@@ -16,70 +16,68 @@
 7. [Coding Standards](#7-coding-standards)
 8. [Analytics Instrumentation](#8-analytics-instrumentation)
 9. [Firestore Data Model](#9-firestore-data-model)
-10. [Working on a Task](#10-working-on-a-task)
-11. [Git Workflow & Pull Requests](#11-git-workflow--pull-requests)
-12. [Testing](#12-testing)
-13. [Design System](#13-design-system)
-14. [Deployment](#14-deployment)
-15. [Things You Must Not Do](#15-things-you-must-not-do)
-16. [Resources](#16-resources)
+10. [Admin Ops Dashboard](#10-admin-ops-dashboard)
+11. [Working on a Task (Linear + SOPs)](#11-working-on-a-task-linear--sops)
+12. [Communication (Discord)](#12-communication-discord)
+13. [Git Workflow & Pull Requests](#13-git-workflow--pull-requests)
+14. [Testing](#14-testing)
+15. [Design System](#15-design-system)
+16. [Deployment](#16-deployment)
+17. [Things You Must Not Do](#17-things-you-must-not-do)
+18. [Resources & Access Checklist](#18-resources--access-checklist)
 
 ---
 
 ## 1. Welcome & Project Context
 
-Yggdrasil is an AI-powered semantic journaling web app. Users write journal entries; the app automatically extracts themes, emotions, people, and patterns from each one, then surfaces insights, a visual knowledge graph, and non-obvious connections across their entire journal history.
+Yggdrasil is an AI-powered semantic journaling web app. Users write (or dictate) journal entries; the app extracts themes, emotions, people, and patterns from each one via Gemini, then surfaces insights, a visual knowledge graph, and semantic clusters across their entire journal history.
 
-We are rebuilding it from scratch on a Google-native stack and submitting it to the **Build with Gemini XPRIZE hackathon** (Education & Human Potential category, $2M prize pool). The submission deadline is **August 17, 2026**. Everything we do is scoped to that date.
+We are building on a Google-native stack and submitting to the **Build with Gemini XPRIZE hackathon** (Education & Human Potential category, $2M prize pool). The submission deadline is **August 17, 2026**. Everything is scoped to that date.
 
-**There is an existing prototype** at `github.com/lovable-isa23/yggdrasil-journal` (React + Supabase). The live prototype is at [https://yggdrasil-journal.lovable.app](https://yggdrasil-journal.lovable.app/). It is **reference material only** — do not copy code from it. It tells you what was built; you are building the new version. But if you want to test out the prototype, feel free to use it. [Sign In] -> [Sign Up] -> [Home] to bypass beta paywall.
+There is an older prototype (React + Supabase, on Lovable). It is **reference material only** — do not copy code from it. It tells you what was built; we are building the new version on Firebase + Gemini.
 
-### Why this matters for how you work
+**Why this matters for how you work:** XPRIZE judges on **Business Viability**, **AI-Native Operations**, and **Category Impact**. Every task exists in service of at least one. When in doubt about scope, ask: does this advance the submission? If not, flag it rather than building it.
 
-XPRIZE judges on three criteria: **Business Viability**, **AI-Native Operations**, and **Category Impact**. Every task you receive exists in service of at least one of those. When in doubt about scope, ask yourself: does this advance the submission? If not, flag it rather than building it.
+> **New here?** Jump to the [Access Checklist](#18-resources--access-checklist) first — get into Linear, Discord, GitHub, and Firebase before anything else.
 
 ---
 
-## 2. The App
+## 2. The App & What's Actually Built
 
-The app has five main tabs and a floating AI companion:
+The product vision is five tabs plus a floating AI companion. **Not all of it is built** — this section is the honest current state (July 2026). Check the "Status" column before you assume a feature exists. The canonical, always-updated version of this table is §13 of [`docs/yggdrasil-product-spec-v4.md`](yggdrasil-product-spec-v4.md).
 
-| Tab | What it does |
-|---|---|
-| **Journal** | Rich text composer. Users write entries with mood, tags, and entry type. On save, a single Gemini call runs a two-phase analysis in the background, returning 13 structured fields. |
-| **Entries** | Entry list with full-text and semantic search (Firestore KNN), tag browser. |
-| **Roots** | Goals, Journeys, gamification. A Living Tree grows as the user journals consistently. Achievements unlock at milestones. |
-| **Insights** | 6-section dashboard: streak calendar, mood charts, semantic cluster map, emotional patterns, Hidden Connections, and Knowledge Graph. |
-| **Settings** | Analytical framework toggles (e.g. Jungian archetypes), data export. |
-| **Yggi Chat** | Floating AI companion (bottom-right FAB). Opens a right-side drawer. Full RAG access to user's journal history via Firestore KNN. Warm, reflective — not a chatbot. |
+| Tab / feature | What it does | Status |
+|---|---|---|
+| **Journal** | Rich composer: entry types, two-slider mood, tags, voice notes. On save, a Cloud Function runs two-phase Gemini analysis. | ✅ Live |
+| **Entries** | Entry list + search bar. | ✅ Live (full-text; semantic search UI pending) |
+| **Insights** | Streak calendar, mood charts, emotional patterns, cluster map, knowledge graph. | ✅ Live (5 of 6 sections) |
+| **Roots** (Goals, Journeys, Living Tree, Achievements) | Growth/gamification. | 🔲 Stub page — schemas exist in `types/goals.ts`, no UX yet |
+| **Settings** | 12 analytical-framework toggles. Data export + account deletion. | ⚠️ Framework toggles live; export/delete not built |
+| **Yggi Chat** | Floating RAG companion over journal history. | 🔲 Backend `yggiChat` function exists; **no frontend caller yet** |
+| **Hidden Connections** | Signature feature (see below). | 🔲 Backend exists (KNN only); no UI, Cirq is stubbed |
+| **Marketing homepage** | Public landing page + live rate-limited demo + email capture. | ✅ Live (added June 2026) |
+| **Admin ops dashboard** | Internal ops view (leads, demo activity, analysis logs). | ✅ Live — see [§10](#10-admin-ops-dashboard) |
+
+If your task touches a 🔲 feature, you may be building it for the first time — confirm scope with Isa.
 
 ### Subscription tiers
 
+Two tiers: **Free** and **Pro**. Pro is any active paid `billingPeriod` (monthly / yearly / lifetime).
+
 | Feature | Free | Pro |
 |---|---|---|
-| Journal entries | Unlimited | Unlimited |
-| AI extraction (themes, emotions, etc.) | ✅ | ✅ |
-| Entry insights | 5 trial entries, then paywalled | Unlimited |
-| Journeys | 3 | Unlimited |
-| Goals | 5 | Unlimited |
+| Journal entries + AI extraction | ✅ | ✅ |
+| Entry insights | 5 analyzed entries, then gated | Unlimited |
 | Knowledge graph | Basic | Full |
-| Yggi Chat | ❌ | ✅ |
-| Hidden Connections | ❌ | ✅ |
-| Weekly digest | ❌ | ✅ |
-| Data export | ❌ | ✅ |
+| Yggi, Hidden Connections, weekly digest, data export | ❌ (planned) | ✅ (planned) |
 
-After hitting any per-feature limit, Free users are shown `/pricing`. Pro plans: $4.99/month, $44.99/year, $149 lifetime.
+Pricing: **$4.99/mo · $44.99/yr · $149 lifetime**. Only the **insight gate** (5 analyzed entries) is enforced in code today, inside `functions/src/gemini/analyzeEntry.ts` via `FREE_INSIGHT_LIMIT` + the `insightGated` flag. Journey/goal caps are **not** enforced yet — don't assume they are.
 
-### Hidden Connections — the signature feature
+### Hidden Connections — the signature feature (aspirational)
 
-This is the primary XPRIZE technical differentiator. It surfaces non-obvious relationships between journal entries using **Google Cirq** (quantum-inspired graph analysis).
+The intended pipeline: on save, Gemini embeds the entry → a batch runs **Google Cirq** (quantum-inspired graph analysis) to find non-obvious pairs → D3 renders them, with a silent **Firestore KNN cosine-similarity fallback**. Whichever path runs is logged via `hidden_connections_computation` (`path: 'cirq' | 'fallback_knn'`).
 
-**Pipeline:**
-1. On entry save, Gemini generates an embedding stored as a Firestore vector field
-2. Nightly batch: Cirq performs quantum-inspired graph analysis on the embedding space to find non-obvious connection pairs
-3. Scored pairs are rendered via D3.js in the Insights dashboard
-
-**Fallback:** If Cirq fails or is unavailable, the system silently falls back to Firestore KNN cosine similarity. The UI is identical either way — users never see which path ran. Whichever path runs is logged via the `hidden_connections_computation` Analytics event (`path: 'cirq' | 'fallback_knn'`) and to the admin operations dashboard.
+**Reality today:** `functions/src/insights/hiddenConnections.ts` exists, but the Cirq branch is a stub that always throws → it always runs the KNN fallback, nothing calls the function, and there's no UI. Treat this as unbuilt.
 
 ---
 
@@ -87,21 +85,19 @@ This is the primary XPRIZE technical differentiator. It surfaces non-obvious rel
 
 | Layer | Technology | Version |
 |---|---|---|
-| Framework | Next.js (App Router, TypeScript) | 15.5 |
+| Framework | Next.js (App Router, Turbopack) | 15.5 |
 | UI | React | 19 |
 | Styling | Tailwind CSS | v4 |
-| Auth | Firebase Auth (email/password + Google Sign-In) | Firebase 12 |
-| Database | Firestore (incl. KNN vector search) | Firebase 12 |
-| File storage | Firebase Storage | Firebase 12 |
-| Backend | Firebase Cloud Functions (TypeScript) | v2 |
+| Auth / DB / Storage | Firebase Auth, Firestore (+ KNN vector search), Storage | Firebase 12 |
+| Backend | Firebase Cloud Functions (TypeScript) + Next.js API routes | Functions v2 |
 | AI | Gemini API (`@google/generative-ai`) | ^0.24 |
-| Graph analysis | Google Cirq (via GCP — uses Firebase credentials) | — |
+| Graph analysis | Google Cirq (planned; KNN fallback today) | — |
 | Graph visualisation | D3.js | v7 |
-| Payments | Stripe | ^22 |
-| Hosting | Cloud Run (containerised Next.js) | — |
-| Analytics | Firebase Analytics | Firebase 12 |
+| Payments | Stripe | ^22 (functions) |
+| Analytics | Firebase Analytics (client) + GA4 Measurement Protocol (server) | — |
+| Hosting | Cloud Run (containerised Next.js), GitHub Actions deploy | — |
 
-**Rule:** if a Google Cloud product covers the use case, use it. Do not introduce third-party alternatives for things Firebase/GCP already handles.
+**Rule:** if a Google Cloud product covers the use case, use it. Don't introduce third-party alternatives for what Firebase/GCP already handles.
 
 ---
 
@@ -109,12 +105,10 @@ This is the primary XPRIZE technical differentiator. It surfaces non-obvious rel
 
 ### Prerequisites
 
-Make sure you have these installed before cloning:
-
-- **Node.js** v20 or later — check with `node -v`. Use [nvm](https://github.com/nvm-sh/nvm) if you need to manage versions.
-- **npm** v10 or later — check with `npm -v`
-- **Git** — check with `git --version`
-- **Firebase CLI** — `npm install -g firebase-tools`; used for the emulator suite
+- **Node.js v20+** (`node -v`) — use [nvm](https://github.com/nvm-sh/nvm) to manage versions
+- **npm v10+** (`npm -v`)
+- **Git** (`git --version`)
+- **Firebase CLI** — `npm install -g firebase-tools` (for the emulator suite)
 
 ### Clone and install
 
@@ -122,166 +116,149 @@ Make sure you have these installed before cloning:
 git clone https://github.com/astrayama/yggdrasil.git
 cd yggdrasil
 npm install
+cd functions && npm install && cd ..   # functions is a separate package
 ```
 
 ### Environment variables
 
-Copy the example file and fill in the values Isa provides to you directly:
+There is no committed `.env.local`. Start from the template (it already has the **public** Firebase client config; secrets are blank) and ask Isa for the secret values:
 
 ```bash
-cp .env.local.example .env.local
+cp .env.production.example .env.local
 ```
 
-**Never commit `.env.local`.** It is in `.gitignore`. The file contains secrets that must never reach version control.
+**Never commit `.env.local` or `.env.production`.** Both are gitignored. Only the `*.example` templates are tracked. If you ever commit a real secret, tell Isa immediately so keys can be rotated.
 
-The variables you need locally:
+Variables you'll set locally (see `.env.production.example` for the full list):
 
-| Variable | What it's for | Exposed to browser? |
+| Variable | For | In browser? |
 |---|---|---|
-| `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebase client config | Yes (safe — restricted by Firebase) |
-| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Firebase client config | Yes |
-| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Firebase client config | Yes |
-| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Firebase client config | Yes |
-| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Firebase client config | Yes |
-| `NEXT_PUBLIC_FIREBASE_APP_ID` | Firebase client config | Yes |
-| `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID` | Firebase Analytics | Yes |
-| `FIREBASE_ADMIN_PROJECT_ID` | Firebase Admin — server-side only | No |
-| `FIREBASE_ADMIN_CLIENT_EMAIL` | Firebase Admin service account | No |
-| `FIREBASE_ADMIN_PRIVATE_KEY` | Firebase Admin private key — keep this secret | No |
-| `GEMINI_API_KEY` | Gemini API — server-side only | No |
-| `GEMINI_MODEL_DEFAULT` | `gemini-2.0-flash` — do not change | No |
-| `GEMINI_MODEL_PRO` | `gemini-2.0-pro` — used only where explicitly needed | No |
-| `GEMINI_MODEL_EMBEDDING` | `gemini-embedding-exp` — for embeddings | No |
-| `CIRQ_ENABLED` | `true` to enable Cirq; falls back to Firestore KNN if `false` or on failure | No |
-| `STRIPE_SECRET_KEY` | Stripe API — server-side only | No |
-| `STRIPE_PUBLISHABLE_KEY` | Stripe — safe for browser | Yes |
-| `STRIPE_WEBHOOK_SECRET` | For verifying Stripe webhook signatures | No |
-| `STRIPE_PRICE_ID_PRO` | Stripe price ID for Pro monthly | No |
-| `STRIPE_PRICE_ID_ANNUAL` | Stripe price ID for Pro annual | No |
-| `STRIPE_PRICE_ID_LIFETIME` | Stripe price ID for Lifetime one-time payment | No |
+| `NEXT_PUBLIC_FIREBASE_*` | Firebase client config (7 vars) | Yes — safe, restricted by rules |
+| `FIREBASE_ADMIN_PROJECT_ID` / `_CLIENT_EMAIL` / `_PRIVATE_KEY` | Admin SDK (server only) | No |
+| `GEMINI_API_KEY` | Gemini (server only) | No |
+| `GEMINI_MODEL_DEFAULT` / `_PRO` / `_EMBEDDING` | Model selection | No |
+| `CIRQ_ENABLED` | Toggle Cirq path (KNN fallback otherwise) | No |
+| `STRIPE_SECRET_KEY` / `_WEBHOOK_SECRET` / `_PUBLISHABLE_KEY` | Stripe | secret keys No; publishable Yes |
+| `STRIPE_PRICE_ID_PRO` / `_ANNUAL` / `_LIFETIME` | Stripe price IDs | No |
+| `GA4_MEASUREMENT_ID` / `GA4_API_SECRET` | Server-side analytics | No |
 | `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` locally | Yes |
 
-> **Important:** Variables prefixed with `NEXT_PUBLIC_` are bundled into the client-side JavaScript bundle and are **publicly visible** in the browser. Never put secrets (API keys, private keys, Stripe secret keys) in a `NEXT_PUBLIC_` variable.
+> Anything prefixed `NEXT_PUBLIC_` is bundled into client JS and is **publicly visible**. Never put a secret behind a `NEXT_PUBLIC_` name.
 
-### Run the development server
+**Cloud Functions have their own env** (`functions/.env.production.example`): `APP_URL`, the Stripe price IDs and secrets, etc. In production these come from **GCP Secret Manager**, not any file.
+
+### Run it
 
 ```bash
-npm run dev        # start dev server on http://localhost:3000 (uses Turbopack)
-npm run build      # production build
-npm run start      # start production build locally
-npm run lint       # ESLint
-npm run type-check # TypeScript check with no output — run this before every PR
+npm run dev         # dev server, http://localhost:3000 (Turbopack)
+npm run build       # production build — run before every PR
+npm run start       # serve the production build
+npm run lint        # ESLint
+npm run type-check  # tsc --noEmit — run before every PR
+npm test            # Jest
 ```
 
 ### (Optional) Firebase Emulator Suite
 
-For testing Firestore rules and Cloud Functions locally without touching production data:
+For testing rules/functions without touching prod data:
 
 ```bash
-# First-time setup
 firebase login
 firebase use yggdrasil-497923
-
-# Start emulators
-firebase emulators:start
+firebase emulators:start   # UI at http://localhost:4000
 ```
 
-The emulator UI runs at `http://localhost:4000`. Data does not persist between runs unless you pass `--export-on-exit` and `--import`. Ask Isa if you need a seed dataset.
+Data doesn't persist between runs unless you pass `--export-on-exit` / `--import`. Ask Isa for a seed dataset if you need one.
 
 ---
 
 ## 5. Codebase Structure
 
+This reflects the repo as it actually is today.
+
 ```
 yggdrasil/
-├── app/                            # Next.js App Router — pages, layouts, API routes
-│   ├── (auth)/                     # Unauthenticated routes (no layout auth guard)
-│   │   ├── login/
-│   │   └── signup/
-│   ├── (dashboard)/                # Protected routes — all gated by layout.tsx
-│   │   ├── layout.tsx              # Auth guard — redirects to /login if no user
-│   │   ├── journal/
-│   │   ├── entries/
-│   │   ├── roots/
-│   │   ├── insights/
-│   │   └── settings/
-│   ├── admin/                      # Internal admin operations dashboard (Isa-only)
-│   ├── api/                        # Next.js API routes (server-side)
-│   │   ├── health/
-│   │   └── stripe/                 # Stripe webhook handler
-│   ├── layout.tsx                  # Root layout — wraps everything
-│   ├── page.tsx                    # Landing / root redirect
-│   └── globals.css
+├── app/                              # Next.js App Router
+│   ├── (auth)/                       # login, signup (public)
+│   ├── (dashboard)/                  # protected — layout.tsx guards on useAuth
+│   │   ├── layout.tsx                # redirects to /login if no user; wraps SubscriptionProvider
+│   │   ├── journal/                  # composer + entry detail ([entryId])
+│   │   ├── entries/                  # list + search
+│   │   ├── roots/                    # STUB page
+│   │   ├── insights/                 # insights dashboard
+│   │   ├── settings/                 # framework toggles + billing
+│   │   └── pricing/                  # plan selection / checkout entry
+│   ├── admin/
+│   │   ├── login/                    # admin sign-in → mints __session cookie (PUBLIC)
+│   │   └── (protected)/              # gated by session cookie + admin claim
+│   │       ├── layout.tsx            # verifies __session + decoded.admin
+│   │       └── dashboard/            # the ops dashboard
+│   ├── api/                          # Next.js API routes (server-side)
+│   │   ├── auth/session/             # POST/DELETE admin session cookie
+│   │   ├── reflect/                  # PUBLIC homepage demo (rate-limited, no auth)
+│   │   ├── subscribe/                # PUBLIC email lead capture
+│   │   ├── knowledge-graph/          # auth'd graph builder (Bearer ID token)
+│   │   ├── backfill-denormalize/     # dev-only migration
+│   │   └── health/
+│   ├── layout.tsx                    # root layout (wraps AuthProvider)
+│   └── page.tsx                      # marketing homepage
 │
-├── components/                     # React components
-│   ├── entries/                    # Entry list, search, tag browser
-│   ├── insights/                   # Charts, cluster map, Hidden Connections, Knowledge Graph
-│   ├── journal/                    # Entry composer, mood sliders
-│   ├── roots/                      # Goals, journeys, Living Tree, achievements
-│   ├── shared/                     # Cross-feature shared components
-│   ├── ui/                         # Primitive UI: buttons, inputs, modals, cards
-│   └── yggi/                       # Yggi Chat FAB + drawer
+├── components/
+│   ├── auth/                         # AuthForm
+│   ├── billing/                      # FeatureGate, PlanCard, UpgradeCallout
+│   ├── entries/                      # EntryList, SearchBar
+│   ├── insights/                     # KnowledgeGraph, ClusterMap, MoodCharts, StreakCalendar,
+│   │                                 #   EmotionalPatterns, InsightCard, FamiliarPatternToast
+│   ├── journal/                      # Composer, MoodSliders, EntryTypeSelector, VoiceRecorder, ThinkingIndicator
+│   └── marketing/                    # homepage: Home, ComposerDemo, GraphDemo, canvases, PlanCard, etc.
 │
-├── hooks/                          # Custom React hooks
-│   ├── useAuth.ts                  # Auth state + sign-in/out helpers
-│   ├── useFirestore.ts             # Generic Firestore data access
-│   └── useJournal.ts               # Journal entry state and operations
+├── context/                          # AuthContext, SubscriptionContext (React providers)
+├── hooks/                            # useAuth, useSubscription, useFirestore
+│                                     #   (note: there is NO useJournal — entries go through lib/entries.ts)
+├── lib/
+│   ├── analytics/client.ts           # client-side Firebase Analytics event helpers
+│   ├── analytics/server.ts           # server-side analytics helper
+│   ├── auth.ts                       # sign-in/out wrappers + friendly error messages
+│   ├── entries.ts                    # createEntry / updateEntry / deleteEntry (client Firestore)
+│   ├── clustering.ts                 # K-Means (client cluster map)
+│   ├── knowledgeGraph.ts             # buildKnowledgeGraph (used by the API route)
+│   ├── moodLabel.ts                  # polarity×intensity → "How We Feel" label
+│   ├── voiceNotes.ts                 # calls the transcribeAudio function
+│   ├── firebase/{client,admin,converters}.ts
+│   ├── gemini/client.ts
+│   ├── vertex/client.ts              # Vertex client (migration target; mostly unused)
+│   └── marketing/demoGuard.ts        # abuse guards for public endpoints
 │
-├── lib/                            # Service clients and shared utilities
-│   ├── analytics.ts                # All Analytics event functions — typed, use these
-│   ├── firebase/
-│   │   ├── client.ts               # Firebase client SDK init (auth, db, storage, analytics, KNN)
-│   │   └── admin.ts                # Firebase Admin SDK init — server-side only
-│   ├── gemini/
-│   │   └── client.ts               # Gemini API client
-│   └── stripe/
-│       └── client.ts               # Stripe client
+├── types/                            # journal, insights, goals, subscription, user
 │
-├── types/                          # TypeScript type definitions — use these everywhere
-│   ├── journal.ts                  # JournalEntry, EntryAnalysis, EntryType, Mood
-│   ├── user.ts                     # UserProfile
-│   ├── goals.ts                    # Goal, Journey, Achievement
-│   └── insights.ts                 # Connection, InsightCluster, WeeklyReport
-│
-├── functions/                      # Firebase Cloud Functions (separate TypeScript project)
+├── functions/                        # Cloud Functions (SEPARATE TypeScript package)
 │   └── src/
-│       ├── index.ts                # All function exports
-│       ├── gemini/
-│       │   └── analyzeEntry.ts     # 2-phase entry analysis (depth scoring + 13-field JSON)
-│       ├── insights/
-│       │   └── hiddenConnections.ts  # Cirq quantum graph + Firestore KNN fallback
-│       ├── yggi/
-│       │   └── chat.ts             # Yggi companion chat (RAG + Gemini)
-│       ├── reports/
-│       │   └── weeklyReport.ts     # Scheduled weekly AI report generation
-│       └── admin/
-│           └── backfillEmbeddings.ts  # Admin utility — backfill embeddings
+│       ├── index.ts                  # all exports
+│       ├── gemini/analyzeEntry.ts    # 2-phase analysis + embedding + edges + clusters
+│       ├── gemini/transcribeAudio.ts # voice-note transcription
+│       ├── gemini/computeConnections.ts, computeClusters.ts
+│       ├── insights/hiddenConnections.ts
+│       ├── yggi/chat.ts
+│       ├── reports/weeklyReport.ts   # STUB
+│       ├── auth/onUserCreate.ts      # seeds users/{uid} on signup
+│       ├── admin/backfillEmbeddings.ts  # admin-claim gated HTTP fn
+│       ├── stripe/                   # createCheckout, billingPortal, webhook, lifetimeUpgrade, shared, store
+│       └── lib/                      # gemini.ts, analytics.ts (GA4 server), vectorSearch.ts
 │
-├── docs/                           # Project documentation
-├── public/                         # Static assets
-├── Dockerfile                      # Cloud Run container definition
-├── firebase.json                   # Firebase project configuration
-├── firestore.rules                 # Firestore security rules
-├── firestore.indexes.json          # Firestore composite indexes
-├── storage.rules                   # Firebase Storage security rules
-├── jest.config.ts                  # Jest configuration
-├── jest.setup.ts                   # Jest setup (imports @testing-library/jest-dom)
-├── tsconfig.json                   # TypeScript config
-└── package.json
+├── scripts/set-admin-claim.mjs       # grant/revoke the admin custom claim
+├── docs/                             # specs, this guide, analysis schema, brand
+├── Dockerfile, firebase.json, firestore.rules, firestore.indexes.json, storage.rules
+└── .github/workflows/                # ci.yml (PR checks), deploy.yml (Cloud Run)
 ```
 
 ### Path alias
 
-`@/*` resolves to the project root. Use it everywhere — never use relative `../` imports:
+`@/*` resolves to the project root. Use it everywhere — never relative `../../` imports.
 
 ```ts
-// ✅ correct
-import { logEntryCreated } from '@/lib/analytics';
+import { logEntryCreated } from '@/lib/analytics/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { JournalEntry } from '@/types/journal';
-
-// ❌ wrong — will break if files move
-import { logEntryCreated } from '../../../lib/analytics';
 ```
 
 ---
@@ -290,665 +267,356 @@ import { logEntryCreated } from '../../../lib/analytics';
 
 ### Firebase: client SDK vs. Admin SDK
 
-This is the most important distinction in the codebase. There are **two separate Firebase SDKs** and they are not interchangeable.
+The most important distinction in the codebase. Two separate SDKs, not interchangeable.
 
 | | Client SDK | Admin SDK |
 |---|---|---|
-| Initialised in | `lib/firebase/client.ts` | `lib/firebase/admin.ts` |
-| Used in | React components, hooks, client-side code | API routes (`app/api/`), Cloud Functions |
-| Security rules | Enforced | Bypassed entirely |
-| Package | `firebase` (v12) | `firebase-admin` |
-| Auth context | Logged-in user's session | Service account with full access |
+| Init | `lib/firebase/client.ts` | `lib/firebase/admin.ts` |
+| Used in | components, hooks, client code | API routes, Cloud Functions |
+| Security rules | Enforced | **Bypassed entirely** |
+| Package | `firebase` | `firebase-admin` |
 
-**Client SDK** (`firebase/firestore`, `firebase/auth`, etc.):
-```ts
-import { db } from '@/lib/firebase/client';
-import { collection, getDocs } from 'firebase/firestore';
-```
+`adminDb`/`adminAuth` can read/write anything and skip all rules — only use them server-side, and always check `request.auth` / verify a token first. Importing `firebase-admin` into a client component breaks the build.
 
-**Admin SDK** (`firebase-admin`) — **only in server-side code**:
-```ts
-import { adminDb } from '@/lib/firebase/admin';
-// adminDb can write to any document — it bypasses all security rules
-```
+### Next.js Server vs. Client Components
 
-> If you import `firebase-admin` in a React component, it will throw at build time. If you use the client SDK in a Cloud Function to write to a protected path, it will fail silently due to security rules. Both are bugs you will encounter if you mix them.
+App Router defaults to **Server Components**. Add `'use client'` only when you need hooks, event handlers, browser APIs, or context. Keep `'use client'` as deep in the tree as possible — don't mark a whole page client just for one button.
 
-### Next.js App Router: Server Components vs. Client Components
+### All AI calls go through the server
 
-Next.js App Router defaults to **Server Components** — they run on the server during render and cannot use browser APIs, React state, or event handlers.
+**Never call Gemini from the browser** — the key would be in the bundle. Journal analysis runs in the `analyzeEntry` Cloud Function (triggered by the Firestore write from `lib/entries.ts`). Callable functions (`yggiChat`, `transcribeAudio`) validate `request.auth` and check `userId === auth.uid`.
 
-Add `'use client'` only when you need:
-- `useState`, `useEffect`, or other React hooks
-- Event handlers (`onClick`, `onChange`, etc.)
-- Browser APIs (`window`, `document`, `localStorage`)
-- Context that requires a provider
+The one public AI surface is `POST /api/reflect` (the homepage demo). It is deliberately unauthenticated but **heavily guarded** — see abuse guards below. Don't copy its "no auth" shape into logged-in features.
 
-**Keep `'use client'` as deep in the component tree as possible.** Don't mark a whole page as a client component just because one button needs an `onClick`. Extract the interactive part into its own small component.
+### The entry analysis pipeline
 
-```tsx
-// app/(dashboard)/insights/page.tsx — Server Component (default, no 'use client')
-// Fetches data server-side, renders a layout
+A journal save writes `users/{uid}/entries/{id}` with `analysisStatus: 'pending'` (via `lib/entries.ts`). That write triggers `analyzeEntry`:
 
-// components/insights/HiddenConnectionsGraph.tsx — Client Component
-'use client'; // needs D3 (browser API) and useState for interaction
-```
+1. **Phase 1 — depth score** (1–11) decides how deep Phase 2 goes.
+2. **Phase 2 — one Gemini call** returns the 13-field analysis JSON (see [`docs/analysis-schema.md`](analysis-schema.md)), plus an embedding.
+3. The function computes similarity **edges** and **clusters**, then commits: it writes the analysis to the `analysis` subcollection **and denormalizes a copy onto the entry doc** (`entry.analysis`) so the knowledge-graph API doesn't have to fan out. Status flips to `complete`.
 
-### All AI calls go through Cloud Functions
-
-**Never call the Gemini API directly from the browser.** The API key would be visible to anyone who opens DevTools.
-
-All AI functionality is gated behind Firebase Cloud Functions, which run server-side and are authenticated — only signed-in users can call them.
-
-```ts
-// ✅ Correct — call the Cloud Function from client code
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import { app } from '@/lib/firebase/client';
-
-const functions = getFunctions(app);
-const analyzeEntry = httpsCallable(functions, 'analyzeEntry');
-const result = await analyzeEntry({ entryId, content, userId });
-
-// ❌ Never do this from client-side code
-import { GoogleGenerativeAI } from '@google/generative-ai';
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY); // key exposed in bundle
-```
-
-Cloud Functions validate the caller's auth token automatically via `request.auth`. If `request.auth` is null, the function throws `unauthenticated` — you can see this pattern in `functions/src/gemini/analyzeEntry.ts`.
-
-### Gemini entry analysis pipeline
-
-Each journal entry triggers a **single Gemini API call** in `analyzeEntry.ts` — not 13 separate calls. The process is two-phase:
-
-**Phase 1 — Depth scoring:** A lightweight Gemini call scores the entry on a 1–11 scale. This score determines how deeply Phase 2 analyses the entry (lower depth = faster, cheaper; higher depth = more psychological/spiritual analysis).
-
-**Phase 2 — Comprehensive analysis:** One prompt returns a JSON object with 13 structured fields:
-
-| Field | Description |
-|---|---|
-| `entities` | Key people, places, events, and concepts mentioned |
-| `themes` | Overarching topics (up to 5) |
-| `emotions` | Emotional tones with intensity scores |
-| `keywords` | Significant terms |
-| `summary` | 2–3 sentence summary of the entry |
-| `safety_concerns` | Crisis/harm detection flags — handle with care |
-| `interpretation.main_insight` | Core psychological/spiritual interpretation |
-| `interpretation.questions` | 3–5 reflective questions for the user |
-| `interpretation.action_items` | Concrete suggested actions |
-| `interpretation.patterns_identified` | Cognitive distortions, behavioural patterns |
-| `interpretation.growth_connection` | Links to the user's larger self-development journey |
-| `interpretation.frameworks_applied` | Which analytical frameworks were relevant *(depth ≥ 3 only)* |
-| `interpretation.depth_analysis` | Deeper psychological/spiritual themes and unconscious material *(depth ≥ 3 only)* |
-
-**4 optional outputs** are gated by user Settings and are not part of the core 13: `chakra_tags`, `tarot_tags`, `sacred_geometry`, `archetype_tags`.
-
-**12 analytical frameworks** (toggled in Settings, applied when depth ≥ 3): Theravada Buddhist, Freudian, Jungian, Hermetic, Advaita Vedanta, Taoist, Attachment Theory, IFS, CBT, DBT, Stoic, Gnostic.
+If you change the analysis shape, update **both** the subcollection write and the denormalized copy, plus `types/journal.ts` and `docs/analysis-schema.md`.
 
 ### AI model defaults
 
-| Variable | Model | When to use |
-|---|---|---|
-| `GEMINI_MODEL_DEFAULT` | `gemini-2.0-flash` | Everything — default, fast, cost-effective |
-| `GEMINI_MODEL_PRO` | `gemini-2.0-pro` | Only when `flash` produces noticeably worse results and you can justify the cost |
-| `GEMINI_MODEL_EMBEDDING` | `gemini-embedding-exp` | Embeddings only |
+Read models from env/constants — **never hardcode a model string**.
 
-Always read the model from environment variables. Do not hardcode model strings:
+| Setting | Model (current code default) |
+|---|---|
+| Default text | `gemini-3.5-flash` (`DEFAULT_MODEL` in `functions/src/lib/gemini.ts`) |
+| Pro | `gemini-3.5-pro` — only with a documented reason (costs more) |
+| Embeddings | `gemini-embedding-001`, truncated to **768 dims** (MRL) to match the Firestore vector index |
 
-```ts
-// ✅
-const model = genAI.getGenerativeModel({
-  model: process.env.GEMINI_MODEL_DEFAULT || 'gemini-2.0-flash',
-});
+> ⚠️ **Known drift:** `deploy.yml` still injects `GEMINI_MODEL_DEFAULT=gemini-2.0-flash` for the Next.js service, which overrides the code default in production. The functions runtime uses the 3.5 default. If you touch model config, confirm the intended prod model with Isa rather than assuming.
 
-// ❌
-const model = genAI.getGenerativeModel({ model: 'gemini-2.0-pro' });
-```
+### Subscriptions & feature gating
 
-### Auth pattern
+- Subscription state lives at `subscriptions/{uid}`, **written only by the Stripe webhook** (`functions/src/stripe/stripeWebhook.ts`), read client-side via `SubscriptionContext` → `useSubscription()`.
+- Gate Pro-only UI with `<FeatureGate>` (`components/billing/`). `entitlement === 'PRO'` means active paid access.
+- The free **insight gate** is enforced server-side in `analyzeEntry` (`FREE_INSIGHT_LIMIT = 5` → sets `insightGated` and persists a trimmed analysis). There is **no** `check-trial-status` function — don't look for one.
+- The webhook resolves users by `stripeCustomerId`, so that field is **server-controlled**; Firestore rules block clients from writing it (and `tier`, `entryCount`, `analyticsClientId`).
 
-The `useAuth` hook (`hooks/useAuth.ts`) provides auth state. The `(dashboard)` layout uses it to guard all protected routes:
+### Abuse guards for public endpoints
 
-```ts
-const { user, loading } = useAuth();
-```
+`/api/reflect` and `/api/subscribe` are unauthenticated, so they use `lib/marketing/demoGuard.ts`: Firestore-backed sliding windows per **device cookie**, per **IP**, and a **global daily** circuit breaker, with an in-memory fast path. Notes if you work here:
+- `getClientIp` takes the **last** `x-forwarded-for` hop (the infra-appended one) — the first hops are client-spoofable.
+- `isCrossSite` rejects cross-origin browser calls.
+- Guards **fail open** to the in-memory limiter if Firestore is down (availability over strictness for a demo).
+- Entry **text is never stored** — only metadata (status, word count, hashed device).
 
-- `user` — a Firebase `User` object, or `null` if signed out
-- `loading` — `true` while auth state resolves on first load
+### Prompt-injection hygiene
 
-**Always handle the `loading` state.** A missing check causes flicker: the user briefly sees either a redirect or protected content before Firebase resolves. Show a spinner when `loading` is `true`.
-
-```tsx
-if (loading) return <LoadingSpinner />;
-if (!user) return null; // layout handles the redirect
-```
-
-### Stripe paywall
-
-Subscription status lives in Firestore at `subscriptions/{userId}`. It is only written by the server-side Stripe webhook handler — never by client code. Feature access is gated by a `<FeatureGate>` component. If you're building a Pro-only feature, wrap it in `<FeatureGate>`.
-
-Free tier limits are enforced per-feature by `check-trial-status` — a function that counts the user's analyzed entries, journeys, goals, etc. against their tier limits (5 entry insights, 3 journeys, 5 goals) and triggers the `/pricing` paywall when a limit is hit. This is not a whole-app redirect — each feature is gated independently. Do not add paywall redirect logic yourself.
+Journal content and user messages are **untrusted**. When you build a new prompt that includes user text, wrap it in delimiters and tell the model to treat the contents as data, not instructions — follow the pattern already in `analyzeEntry.ts`, `yggi/chat.ts`, and `/api/reflect`.
 
 ---
 
 ## 7. Coding Standards
 
-### TypeScript everywhere
-
-- No `.js` files — TypeScript only, including config files where possible
-- `strict: true` is set in `tsconfig.json` — no implicit `any`, no unchecked `null`/`undefined`
-- Use types from `types/` for all domain objects — do not redefine them inline
-
-```ts
-// ✅ Use the defined types
-import type { JournalEntry, EntryType } from '@/types/journal';
-
-// ❌ Don't reinvent domain types
-const entry: { id: string; content: string; type: string } = ...
-```
-
-If you genuinely need `any` (e.g. for cross-platform Firestore types, as seen in `JournalEntry.embedding`), add a comment explaining why.
-
-### Write complete implementations
-
-No stubs. No TODOs. No `// implement later`. If your task says to build a function or component, it must ship with:
-
-- Error handling (`try/catch` for async, error boundaries for components)
-- Loading state (while async operations are in flight)
-- Empty state (when data exists but has zero items)
-- Full TypeScript types with no unexplained `any`
-
-If you hit something genuinely uncertain mid-task, stop and ask rather than leaving a placeholder.
-
-### Firebase SDK — modular imports only
-
-Use the v9+ modular import style. The old namespaced style (`firebase.firestore()`) does not exist in this codebase.
-
-```ts
-// ✅ v9 modular
-import { getDoc, doc, collection, query, where, orderBy } from 'firebase/firestore';
-
-// ❌ Old namespaced — will throw an import error
-import firebase from 'firebase/app';
-firebase.firestore().collection('entries');
-```
-
-### Async/await
-
-Use `async`/`await`. Don't mix `.then()`/`.catch()` chains with `await` in the same function. Use `try/catch` blocks for error handling.
-
-```ts
-// ✅
-async function saveEntry(entry: Partial<JournalEntry>): Promise<string> {
-  try {
-    const ref = await addDoc(collection(db, 'users', userId, 'entries'), entry);
-    return ref.id;
-  } catch (error) {
-    console.error('Failed to save entry:', error);
-    throw error; // re-throw so the caller can handle it
-  }
-}
-```
-
-### Tailwind CSS
-
-- Tailwind v4 for all styling — no CSS Modules, no styled-components, no inline `style` props
-- The primary brand colour is available as `bg-primary` / `text-primary` (maps to `#1A3C2E`)
-- Mobile-first: write base styles for small screens, override with `sm:`, `md:`, `lg:` breakpoints
-- Check `components/ui/` before building a new primitive — it may already exist
+- **TypeScript only**, `strict: true`. Use the domain types in `types/` — don't redefine them inline. If you genuinely need `any` (e.g. cross-platform Firestore `VectorValue`), add a comment saying why.
+- **Complete implementations** — no stubs, TODOs, or "implement later". Ship error handling, loading, and empty states. If you hit something genuinely uncertain, stop and ask.
+- **Firebase v9 modular imports only** (`import { doc, getDoc } from 'firebase/firestore'`).
+- **async/await** with `try/catch`; don't mix `.then()` chains with `await` in one function.
+- **Tailwind v4** for styling — no CSS modules, styled-components, or inline `style`. Check `components/` for an existing pattern before inventing one. The brand green is `bg-primary` / `text-primary` (`#1A3C2E`); the app also uses semantic tokens like `bg-surface`, `text-foreground`, `text-gold`, `text-sage` — reuse them.
 
 ---
 
 ## 8. Analytics Instrumentation
 
-Firebase Analytics is wired throughout the app. **All 29 events are typed** in `lib/analytics.ts`. Use those functions. Never call `logEvent` from `firebase/analytics` directly, and never invent new event names.
+Analytics is split in two:
 
-### How to fire an event
+- **Client events** — `lib/analytics/client.ts` (Firebase Analytics). Import the typed helpers; never call `logEvent` directly or invent event names. The helper guards `typeof window` for you.
+- **Server events** — `functions/src/lib/analytics.ts` sends via the **GA4 Measurement Protocol** (needs `GA4_MEASUREMENT_ID` + `GA4_API_SECRET`). Used for things that happen in Cloud Functions (`insight_generated`, `hidden_connections_computation`, subscription events, weekly report).
 
 ```ts
-import { logEntryCreated, logYggiChatOpened } from '@/lib/analytics';
+import { logEntryCreated, logYggiChatOpened } from '@/lib/analytics/client';
 
-// After entry is successfully saved to Firestore
-logEntryCreated({
-  entry_type: entryType,   // EntryType enum value
-  has_mood: hasMood,       // boolean
-  tag_count: tags.length,  // number
-  word_count: wordCount,   // number
-});
-
-// When the Yggi drawer opens
-logYggiChatOpened();
+logEntryCreated({ entry_type, has_mood, tag_count, word_count });
 ```
 
-Analytics only fires client-side. The helper in `analytics.ts` already guards for `typeof window !== 'undefined'` — you don't need to add that check yourself.
-
-### Event reference by feature area
-
-**Journaling**
-
-| Function | When |
-|---|---|
-| `logEntryCreated({ entry_type, has_mood, tag_count, word_count })` | After entry is saved to Firestore |
-| `logEntryEdited()` | After an existing entry is updated |
-| `logEntryDeleted()` | After an entry is deleted |
-| `logEntrySearched({ search_type: 'full_text' \| 'semantic' })` | When a search is performed |
-
-**AI & Insights**
-
-| Function | When |
-|---|---|
-| `logYggiChatOpened()` | When the Yggi drawer opens |
-| `logYggiMessageSent({ conversation_turn_count })` | On each user message sent |
-| `logInsightGenerated()` | When a per-entry analysis completes (Cloud Function) |
-| `logInsightsTabViewed()` | When the Insights tab mounts |
-| `logHiddenConnectionsViewed()` | When Hidden Connections section is in view |
-| `logHiddenConnectionsComputation({ path: 'cirq' \| 'fallback_knn' })` | On every Hidden Connections run |
-| `logKnowledgeGraphViewed()` | When the D3 knowledge graph renders |
-| `logWeeklyWisdomGenerated()` | When a weekly report is generated |
-
-**Goals & Growth**
-
-| Function | When |
-|---|---|
-| `logGoalCreated()` | After a goal is saved |
-| `logGoalCompleted()` | When a goal is marked complete |
-| `logGoalDeleted()` | When a goal is deleted |
-| `logJourneyStarted()` | When a journey is started |
-| `logJourneyCompleted()` | When a journey is completed |
-| `logAchievementUnlocked({ achievement_id })` | When an achievement fires |
-| `logLivingTreeViewed()` | When the Living Tree component renders |
-
-**Onboarding & Retention**
-
-| Function | When |
-|---|---|
-| `logOnboardingStarted()` | On the user's first session |
-| `logOnboardingCompleted()` | When the onboarding flow finishes |
-| `logSeedEntryAnalyzed()` | When the first AI insight is delivered |
-| `logStreakMilestone({ streak_days })` | When a streak milestone is reached |
-
-**Business**
-
-| Function | When |
-|---|---|
-| `logSubscriptionStarted({ plan })` | After successful Stripe checkout |
-| `logSubscriptionCancelled()` | On cancellation webhook |
-| `logSubscriptionRenewed()` | On renewal webhook |
-| `logPaywallViewed()` | When `/pricing` is shown after the free limit |
-| `logSettingsOpened()` | When Settings tab mounts |
-| `logDataExported()` | When user exports their data |
+The full event catalogue (names + required props) lives in §6 of [`docs/yggdrasil-product-spec-v4.md`](yggdrasil-product-spec-v4.md). **Reality check:** events for unbuilt features (Roots, onboarding, Yggi) are defined but not firing because those features don't exist yet. If your task builds one of those features, wire its events as part of the task.
 
 ---
 
 ## 9. Firestore Data Model
 
-The Firestore security rules define what collections exist and who can access them. Here is the full data model:
-
 ```
-users/{userId}
-    ├── entries/{entryId}               user's journal entries (JournalEntry)
-    │     └── analysis/{analysisId}     Gemini analysis output (EntryAnalysis)
-    ├── goals/{goalId}                  user's goals (Goal)
-    ├── journeys/{journeyId}            user's journeys (Journey)
-    ├── achievements/{achievementId}    unlocked achievements (Achievement)
-    ├── connections/{connectionId}      Hidden Connections — READ only for user; WRITE server only
-    └── weeklyReports/{reportId}        weekly AI reports — READ only for user; WRITE server only
+users/{userId}                        profile; server-controlled: stripeCustomerId, tier,
+    │                                  entryCount, analyticsClientId (clients can't write these)
+    ├── entries/{entryId}              JournalEntry (+ denormalized `analysis`, `embedding` vector)
+    │     └── analysis/{analysisId}    EntryAnalysis — client READ only, server WRITE
+    ├── goals/{goalId}                 Goal
+    ├── journeys/{journeyId}           Journey
+    ├── achievements/{achievementId}   Achievement
+    ├── connections/{connectionId}     similarity edges — client READ only, server WRITE
+    ├── weeklyReports/{reportId}       client READ only, server WRITE
+    ├── settings/{settingId}           user settings (e.g. enabledFrameworks) — owner read/write
+    └── graphMetadata/clusters         precomputed clusters — server WRITE
 
-subscriptions/{userId}                  Stripe subscription status — WRITE server only
+subscriptions/{userId}                 Stripe state — client READ only, server WRITE
+feedback/{feedbackId}                  owner create/read/update/delete
+processedEvents/{eventId}              Stripe webhook idempotency — server only
+adminLogs/{logId}                      server only, no client access
 
-adminLogs/{logId}                       operations dashboard log — server only, NO client access
+# Server-only ops/marketing collections (no client access via rules):
+leads/{hash}                           homepage email captures
+demoReflections/{id}                   demo activity metadata (no entry text)
+demoCounters/{collection-YYYY-MM-DD}   global daily circuit-breaker counts
+demoRateLimits/{key}                   per-device/per-IP sliding windows
+opsLogs/{id}                           entry-analysis run logs (shown on admin dashboard)
 ```
 
-**Access rules:**
-- All `users/{userId}/**` paths: the authenticated owner can read and write their own data only
-- `connections/` and `weeklyReports/`: users can read; only the server (Admin SDK via Cloud Functions) can write
-- `adminLogs/`: completely off-limits to client code — Admin SDK only
-- `subscriptions/`: written by the Stripe webhook API route; read by subscription hooks
+Rules summary: users read/write only their own `users/{uid}/**` (minus the protected fields above); `connections`, `weeklyReports`, `subscriptions`, and the `analysis` subcollection are client-read / server-write; ops/marketing collections are entirely server-side (the Admin SDK bypasses rules). After editing `firestore.rules`, test against the emulator before it ships.
 
-### Key TypeScript types (all in `types/`)
+### Key types (all in `types/`)
 
-```ts
-// types/journal.ts
-JournalEntry        id, userId, title, content (rich text), mood, entryType, tags,
-                    wordCount, createdAt, updatedAt, embedding?, embeddingGeneratedAt?
-
-EntryAnalysis       // Top-level fields (6):
-                    entities[], themes[], emotions[], keywords[], summary,
-                    safety_concerns,
-                    // Nested interpretation object (7 sub-fields):
-                    interpretation: {
-                      main_insight,
-                      questions[],
-                      action_items[],
-                      patterns_identified[],
-                      growth_connection,
-                      frameworks_applied[],  // populated only when depth >= 3
-                      depth_analysis         // populated only when depth >= 3
-                    }
-                    // Optional — gated by user Settings:
-                    chakra_tags?, tarot_tags?, sacred_geometry?, archetype_tags?
-
-EntryType enum      REFLECTION | GRATITUDE | DREAM | EVENT
-
-Mood                { polarity: number,      // 0–10; 5 = neutral; lower = negative, higher = positive
-                      intensity: number,     // 0–10; 5 = moderate; lower = mild, higher = intense
-                      derivedLabel: string } // label from How We Feel vocabulary
-                                             // e.g. polarity 8 + intensity 9 → "Ecstatic"
-                                             //      polarity 2 + intensity 8 → "Anguished"
-                                             //      polarity 4 + intensity 2 → "Melancholic"
-
-// types/user.ts
-UserProfile         id, displayName, email, plan ('FREE' | 'PRO' | 'ANNUAL' | 'LIFETIME'),
-                    streakDays, lastEntryAt
-
-// types/goals.ts
-Goal                id, userId, title, description, status, aiSuggested, sourceEntryId?
-Journey             id, userId, title, steps[], status, startedAt, completedAt?
-Achievement         id, userId, achievementId, unlockedAt, metadata
-
-// types/insights.ts
-Connection          id, entryIdA, entryIdB, score (0–1), reason,
-                    computedVia ('cirq' | 'fallback_knn'), computedAt
-InsightCluster      id, entryIds[], label, centroidTheme
-WeeklyReport        id, userId, weekStarting, summary, topThemes,
-                    moodTrend, goalProgress, aiNarrative
-```
+- `types/journal.ts` — `JournalEntry`, `EntryAnalysis` (6 top-level fields + nested `interpretation` with 7 sub-fields; framework/depth fields gated by `depthScore >= 3`), `EntryType`, `Mood`.
+- `types/subscription.ts` — `SubscriptionTier` (`'FREE' | 'PRO'`), `SubscriptionStatus`, `BillingPeriod` (`'monthly' | 'yearly' | 'lifetime'`).
+- `types/user.ts` — `UserProfile` (`tier`, `entitlement`, `billingPeriod`, `streakDays`, …).
+- `types/goals.ts` — `Goal`, `Journey`, `Achievement`.
+- `types/insights.ts` — connection/cluster/report shapes.
 
 ---
 
-## 10. Working on a Task
+## 10. Admin Ops Dashboard
 
-### How tasks are assigned
+The internal dashboard at **`/admin/dashboard`** shows email leads, homepage demo activity, and entry-analysis `opsLogs`. It's gated two ways (defense in depth):
 
-Tasks are tracked in **GitHub Issues**. Isa owns all architecture and integration decisions. Collaborators implement clearly scoped, self-contained tasks.
+1. A `__session` cookie (the only cookie Firebase Hosting/Cloud Run forwards), minted by `POST /api/auth/session`.
+2. An `admin` **custom claim** on the Firebase user, re-verified by the `(protected)` layout on every request.
 
-When you receive a task, it will specify:
-- Exactly what to build
-- Which files to touch or create
-- What "done" looks like
+### Getting access (Isa or a delegated admin runs this)
 
-### Before you start
+```bash
+# Grant admin to a user (by email or uid). Needs Firebase Admin creds in env
+# (same vars as .env — or `gcloud auth application-default login`).
+node scripts/set-admin-claim.mjs someone@example.com
+# revoke:
+node scripts/set-admin-claim.mjs someone@example.com --revoke
+```
 
-- Read the task description fully before writing any code
-- Check `types/` to understand the data shapes involved
-- Check `components/ui/` to see if you need to build any primitives or if they exist
-- Check `lib/analytics.ts` to know which events to fire
-- If anything is unclear — **ask before starting**, not after
+The user must **sign out and back in** for the claim to take effect, then sign in at **`/admin/login`** (email/password or Google). Signing in there exchanges a fresh ID token for the session cookie; non-admins get a clear "not authorized" message and are signed back out. "Sign out" on the dashboard clears the cookie.
+
+Do **not** grant yourself admin unless Isa asks you to — it exposes other users' email leads.
+
+---
+
+## 11. Working on a Task (Linear + SOPs)
+
+### Where tasks live
+
+Tasks are tracked in **Linear**. Isa owns architecture and integration decisions; collaborators pick up clearly-scoped, self-contained issues.
+
+> **Access:** ask Isa for a Linear invite to the Yggdrasil workspace (link in the [Access Checklist](#18-resources--access-checklist)). Some historical tickets referenced GitHub Issues and ticket IDs like `YGG-97` / `LAU-AI-01`; Linear is the source of truth going forward. The legacy backlog is archived in [`docs/ticket-backlog-v1.md`](ticket-backlog-v1.md) for reference only.
+
+### Ticket lifecycle (SOP)
+
+1. **Pick up** an issue from your assigned Linear cycle (or one Isa assigns). Move it to **In Progress** and assign it to yourself.
+2. **Branch** off the default branch using the issue's Linear ID in the branch name (Linear auto-links branches/PRs that include the ID, e.g. `feat/ygg-123-hidden-connections-ui`).
+3. **Build** within scope. Read the full description first; check `types/`, existing components, and the relevant analytics events before coding.
+4. **Open a PR** (see §13), link the Linear issue, and move the ticket to **In Review**.
+5. **Address review**, get approval, merge. Linear moves the issue to **Done** on merge when linked.
+
+### Before you start a ticket
+
+- Read the description fully.
+- Check `types/` for the data shapes; check `components/` for existing UI patterns; check `lib/analytics/client.ts` for the events to fire.
+- If anything is unclear — **ask in Discord before starting**, not after.
 
 ### Scope discipline
 
-Tasks are scoped intentionally. Do not reach outside the task boundaries. If you notice something adjacent that needs fixing, **flag it in your PR description or as a comment on the issue** — do not fix it silently. Isa handles the wiring between your work and the rest of the system.
-
-### Communication
-
-Reach out to Isa via **Discord DM** (`@isa23_`) for questions. Keep it async — ask clearly in one message rather than sending follow-ups. You don't need to wait for a synchronous call to proceed.
+Tasks are scoped intentionally. Don't reach outside the boundaries. If you spot something adjacent that needs fixing, **flag it** (a comment on the Linear issue or a note in your PR, or open a new Linear ticket) — don't fix it silently. Isa handles integration between your work and the rest of the system.
 
 ---
 
-## 11. Git Workflow & Pull Requests
+## 12. Communication (Discord)
 
-### Branch naming
+Day-to-day coordination happens in the project **Discord server** (ask Isa for the invite — see the [Access Checklist](#18-resources--access-checklist)).
 
-Create branches off `main`. Use the following prefixes:
+**Conventions:**
+- Keep it **async** — post a clear, complete question in one message rather than a trickle of follow-ups. You don't need a synchronous call to proceed.
+- Use the **feature/task channel** for work discussion so it's searchable; DM Isa (`@isa23_`) only for private/blocking issues.
+- Share your PR link in the relevant channel when you open it and when it's ready for review.
+- Post a short update when you pick up, finish, or get blocked on a ticket so the board and chat stay in sync.
+- **Never paste secrets, real user data, or `.env` contents** into Discord (or anywhere). If a secret leaks, say so immediately so it can be rotated.
+
+---
+
+## 13. Git Workflow & Pull Requests
+
+### Branches
+
+Branch off the default branch. Include the Linear issue ID so it auto-links.
 
 | Type | Pattern | Example |
 |---|---|---|
-| New feature | `feat/<short-description>` | `feat/hidden-connections-ui` |
-| Bug fix | `fix/<short-description>` | `fix/auth-redirect-loop` |
-| Documentation | `docs/<short-description>` | `docs/update-onboarding` |
-| Chores (deps, config) | `chore/<short-description>` | `chore/upgrade-firebase-sdk` |
+| Feature | `feat/<id>-<desc>` | `feat/ygg-123-hidden-connections-ui` |
+| Fix | `fix/<id>-<desc>` | `fix/ygg-140-auth-redirect-loop` |
+| Docs | `docs/<desc>` | `docs/update-onboarding` |
+| Chore | `chore/<desc>` | `chore/upgrade-firebase-sdk` |
 
-Use lowercase and hyphens. No spaces, no camelCase.
+Lowercase, hyphens, no spaces. (Some contributors work in git **worktrees** under `.claude/worktrees/` — that's fine; just branch and PR as normal.)
 
-### Commit messages
-
-Follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/):
+### Commits — [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/)
 
 ```
-<type>(<scope>): <short summary in imperative mood>
+<type>(<scope>): <imperative summary under 72 chars>
 
 [optional body — explain why, not what]
 ```
 
-**Types:** `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
+Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`.
 
-Keep the summary line under 72 characters. Use the imperative mood ("add", "fix", "update" — not "added", "fixed", "updating").
+### PR checklist
 
-```
-feat(insights): add Hidden Connections D3 visualisation
-
-fix(auth): handle loading state before redirect in dashboard layout
-
-test(analytics): add unit tests for logEntryCreated
-
-chore(deps): upgrade firebase to 12.14.0
-```
-
-### Pull request checklist
-
-Before opening a PR:
+Before opening a PR, run the same gates CI runs:
 
 ```bash
-npm run type-check   # zero TypeScript errors
-npm run lint         # zero lint errors
-npm run build        # successful production build — catches issues Turbopack misses in dev
+npm run type-check    # zero errors
+npm run lint          # zero errors
+npm test              # green
+npm run build         # production build succeeds
+# if you touched functions/:
+cd functions && npm run build && cd ..
 ```
 
-Your PR description should include:
-- What changed and why (reference the GitHub Issue)
-- Any new environment variables added
-- Anything Isa needs to wire up after merge (e.g. "new Cloud Function needs deploying")
-- Screenshots or screen recordings for any UI changes
+CI (`.github/workflows/ci.yml`) runs type-check, lint, tests, and a functions build on every PR to `main`/`develop`.
 
-**PRs require approval before merge.** Tag Isa as reviewer. Do not merge your own PR.
+Your PR description should cover: what changed and why (link the Linear issue), any new env vars or secrets (so Isa adds them to Secret Manager), anything to wire up after merge (e.g. "new Cloud Function needs deploying"), and screenshots/recordings for UI changes.
+
+**PRs require approval — tag Isa. Do not merge your own PR.**
 
 ---
 
-## 12. Testing
-
-### Testing stack
+## 14. Testing
 
 | Tool | Role |
 |---|---|
-| Jest | Test runner (configured in `jest.config.ts`) |
-| @testing-library/react | Component tests — render, query, assert on DOM |
-| @testing-library/jest-dom | Extended DOM matchers (`.toBeInTheDocument()`, `.toHaveValue()`, etc.) |
+| Jest (`jest.config.ts`) | Runner |
+| @testing-library/react + jest-dom | Component tests + DOM matchers |
 | Firebase Emulator Suite | Local Firestore/Auth/Functions for integration tests |
 
-### Test file location
+- **Co-locate** tests as `*.test.ts(x)` next to the code (e.g. `components/insights/emotionTimeline.test.ts`).
+- **Always test** pure utilities in `lib/` and any calculation/scoring logic (mood label derivation, streak counting, cosine similarity, score thresholds). Test components with meaningful conditional rendering or interaction.
+- **Test user-visible behaviour, not implementation details.**
+- **Mock Firebase** in unit/component tests (it uses browser APIs jsdom lacks). Use the emulator for tests that need real Firestore/Auth behaviour.
+- **Cloud Functions** have their own package under `functions/` — don't test them from the root Jest config.
 
-Co-locate test files with the code they test, using the `.test.ts` / `.test.tsx` suffix:
-
-```
-components/journal/EntryComposer.tsx
-components/journal/EntryComposer.test.tsx
-
-lib/analytics.ts
-lib/analytics.test.ts
-
-hooks/useAuth.ts
-hooks/useAuth.test.ts
-```
-
-### Running tests
+No hard coverage target for the XPRIZE build (optimise for shipping), but new `lib/` utilities and calculation logic must have tests.
 
 ```bash
-npm test                    # run all tests once
-npm test -- --watch         # watch mode — re-runs on file change
-npm test -- --coverage      # coverage report
-npm test -- EntryComposer   # run tests matching a pattern
+npm test                 # once
+npm test -- --watch      # watch mode
+npm test -- --coverage   # coverage
+npm test -- emotionTimeline   # by pattern
 ```
-
-### What to write tests for
-
-**Always test:**
-- Utility functions in `lib/` — pure functions are the easiest to test and have the highest value
-- Any calculation logic (mood score derivation, streak counting, word count, score thresholds)
-- Custom hooks — state changes and side effects
-
-**Write tests for components when:**
-- The component has meaningful conditional rendering (loading/error/empty states)
-- The component handles user interaction that changes state
-
-**Test user-visible behaviour, not implementation details:**
-
-```ts
-// ✅ Testing what the user sees
-it('shows an error message when entry save fails', async () => {
-  // Arrange: mock Firestore addDoc to throw
-  // Act: render <EntryComposer />, fill in content, click Save
-  // Assert: error message text is present in the document
-});
-
-// ❌ Testing implementation detail — don't do this
-it('sets hasError to true when save fails', () => { ... });
-```
-
-### Mocking Firebase
-
-Firebase modules need to be mocked in unit and component tests because they use browser APIs unavailable in jsdom:
-
-```ts
-jest.mock('@/lib/firebase/client', () => ({
-  db: {},
-  auth: {
-    currentUser: { uid: 'test-uid', email: 'test@example.com' },
-  },
-  storage: {},
-  analytics: null,
-}));
-
-// Also mock specific Firestore functions you use:
-jest.mock('firebase/firestore', () => ({
-  getDoc: jest.fn(),
-  addDoc: jest.fn(),
-  collection: jest.fn(),
-  doc: jest.fn(),
-}));
-```
-
-For tests that require real Firestore or Auth behaviour, use the **Firebase Emulator Suite** — start it with `firebase emulators:start` and point the test environment at it.
-
-### Cloud Functions tests
-
-Cloud Functions live in `functions/src/`. They have their own `package.json` and test setup inside the `functions/` directory. Do not try to test Cloud Functions from the root Jest config.
-
-### Coverage expectations
-
-There is no hard coverage target for the XPRIZE build — we are optimising for shipping. That said:
-- Any utility function you add to `lib/` must have tests
-- Any calculation or scoring logic must be tested
-- If you're unsure whether to test something, err on the side of writing a test
 
 ---
 
-## 13. Design System
+## 15. Design System
 
-The visual identity is established. **Do not redesign anything.** Match the existing aesthetic when building UI.
+The visual identity is established. **Do not redesign anything** — match the existing aesthetic.
 
 | Element | Value |
 |---|---|
-| Primary colour | `#1A3C2E` (forest green) — use `bg-primary` / `text-primary` |
-| Palette | Earthy tones, nature and tree metaphors, sacred geometry influences |
-| Brand voice | Warm, elegant, gentle |
-| App tone | Spiritually intelligent — not clinical, not a mood tracker |
-| Metaphors | Trees, roots, growth, the Norse world-tree Yggdrasil |
+| Primary colour | `#1A3C2E` forest green (`bg-primary` / `text-primary`) |
+| Palette | Earthy tones, tree/roots metaphors, sacred geometry; semantic tokens `surface`, `foreground`, `gold`, `sage` |
+| Voice | Warm, elegant, gentle |
+| Tone | Spiritually intelligent — not clinical, not a mood tracker |
 
-**Do not:**
-- Introduce new colour schemes
-- Use clinical or dashboard-style UI patterns
-- Apply rounded-everything trends (pill buttons everywhere, etc.)
-- Use language that sounds like a health or diagnostic app
-- Use cheerful primary colours (blues, greens that aren't forest tones, bright oranges)
+**Don't:** introduce new colour schemes, use clinical/dashboard patterns, pill-everything rounding, health-app language, or bright non-forest primaries.
 
-### Responsive design
-
-Build mobile-first. Rosa journals late at night — often on her phone. Layouts must work at 375px and scale up cleanly.
-
-```tsx
-// Mobile-first with Tailwind
-<div className="flex flex-col md:flex-row gap-4">
-```
-
-### Figma
-
-Figma designs are in progress — available soon. Until then:
-- Reference the Lovable prototype (`github.com/lovable-isa23/yggdrasil-journal`) for visual reference only
-- Do not copy code from the prototype
+**Responsive, mobile-first** — the primary persona journals late at night on her phone. Layouts must work at 375px and scale up. See `docs/brand.md` for more.
 
 ---
 
-## 14. Deployment
+## 16. Deployment
 
-**Only Isa deploys.** Do not attempt to deploy to Cloud Run, deploy Cloud Functions, or push to the Firebase project directly unless Isa has explicitly asked you to handle it.
+**Only Isa deploys.** Don't deploy Cloud Run, deploy Cloud Functions, or push to the Firebase project unless explicitly asked.
 
-The deployment pipeline:
-1. PR merged to `main`
-2. Isa builds the Docker container and pushes to Cloud Run
-3. Cloud Functions are deployed via `firebase deploy --only functions`
+Pipeline: PR merged to `main` → GitHub Actions (`deploy.yml`) builds the Docker image and deploys to Cloud Run with secrets from **GCP Secret Manager**; Cloud Functions deploy via `firebase deploy --only functions`. Production secrets (`FIREBASE_ADMIN_PRIVATE_KEY`, `GEMINI_API_KEY`, Stripe keys, `GA4_API_SECRET`) live in Secret Manager, never in a committed file. **When you add a new secret or env var, call it out in your PR** so Isa adds it before deploying.
 
-If you're interested in the deployment side of the project, tell Isa — she's happy to bring you in on it.
-
-### Environment variables in production
-
-Production secrets live in **GCP Secret Manager** — not in any committed file. The `FIREBASE_ADMIN_PRIVATE_KEY`, `GEMINI_API_KEY`, and Stripe secret keys are all pulled from Secret Manager at runtime. When you add a new secret, note it in your PR description so Isa knows to add it to Secret Manager before deploying.
+If you want to be involved in the deployment side, tell Isa.
 
 ---
 
-## 15. Things You Must Not Do
+## 17. Things You Must Not Do
 
 | Don't | Why |
 |---|---|
-| Call Gemini directly from client-side code | The API key would be exposed in the browser bundle |
-| Import `firebase-admin` in a React component or client code | Admin bypasses all Firestore security rules |
-| Hardcode `gemini-2.0-pro` without documenting why | It costs significantly more than `flash`; we are managing GCP costs |
-| Create `.js` files | TypeScript everywhere |
-| Copy code from the Lovable prototype | Different stack, different patterns — it will cause subtle bugs |
-| Put secrets in `NEXT_PUBLIC_` variables | These are visible in the browser bundle |
-| Commit `.env.local` | It is in `.gitignore` for a reason. If you accidentally commit it, tell Isa immediately so keys can be rotated |
+| Call Gemini from client-side code | The API key would be exposed in the bundle |
+| Import `firebase-admin` in a component/client code | Admin bypasses all Firestore rules |
+| Hardcode a model string / bump to Pro without a documented reason | Cost control; read from env/constants |
+| Let clients write `stripeCustomerId`, `tier`, or other server-controlled fields | Enables billing/entitlement hijacking |
+| Return raw error stacks to clients | Info disclosure — log server-side, return a generic message |
+| Store demo entry text, or log user journal content anywhere public | Privacy is core to the product |
+| Create `.js` app files | TypeScript everywhere (functions is TS too) |
+| Copy code from the Lovable prototype | Different stack/patterns — subtle bugs |
+| Put secrets in `NEXT_PUBLIC_` vars, or commit `.env.local` / `.env.production` | Publicly visible / secret leak → rotate keys |
+| Grant yourself the `admin` claim | Exposes other users' lead data |
 | Merge your own PR | PRs require approval |
-| Add a non-Google AI provider | Gemini API only — it is an XPRIZE requirement |
-| Invent new analytics event names | Use the typed functions in `lib/analytics.ts` exactly as defined |
-| Modify Stripe keys, products, or the Stripe account | The existing account has real customers and active subscriptions |
-| Add a new npm dependency without checking first | Ask Isa before adding anything substantial — bundle size and licence matter |
-| Fix something outside your task scope silently | Flag it. Isa handles integration. |
+| Add a non-Google AI provider | Gemini only — XPRIZE requirement |
+| Invent analytics event names | Use the typed helpers |
+| Touch Stripe keys/products/account | Real customers and active subscriptions |
+| Add a substantial npm dependency without asking | Bundle size + licence |
+| Fix something outside your task scope silently | Flag it; Isa handles integration |
 
 ---
 
-## 16. Resources
+## 18. Resources & Access Checklist
+
+**Get these before your first ticket** (ask Isa for invites where noted):
+
+- [ ] **GitHub** — write access to [`astrayama/yggdrasil`](https://github.com/astrayama/yggdrasil)
+- [ ] **Linear** — invite to the Yggdrasil workspace (task board) · *ask Isa for the link*
+- [ ] **Discord** — server invite (day-to-day comms) · *ask Isa for the link*
+- [ ] **Firebase** — reader access to project `yggdrasil-497923` (only if your task needs it) · *ask Isa*
+- [ ] **Env secrets** — the non-public values for your `.env.local` · *ask Isa; never share these in chat*
 
 ### Project
 
 | | |
 |---|---|
-| **GitHub repo** | [https://github.com/astrayama/yggdrasil](https://github.com/astrayama/yggdrasil) |
-| **Issues / task board** | GitHub Issues on the repo |
-| **Reference prototype** | `github.com/lovable-isa23/yggdrasil-journal` (read-only reference, no code copying) |
-| **Questions** | Discord DM `@isa23_` |
+| GitHub repo | https://github.com/astrayama/yggdrasil |
+| Task board | Linear (ask Isa for the workspace link) |
+| Comms | Discord server (ask Isa) · DM `@isa23_` for private/blocking issues |
+| Firebase project | `yggdrasil-497923` |
+| Production URL | https://yggdrasil-497923.web.app |
 
-### Documentation in this repo
+### Docs in this repo
 
 | File | Contents |
 |---|---|
-| `docs/collaborator-onboarding.md` | This document |
-| `docs/product-spec.md` | Full product specification, personas, and feature detail |
+| [`docs/collaborator-onboarding.md`](collaborator-onboarding.md) | This guide |
+| [`docs/yggdrasil-product-spec-v4.md`](yggdrasil-product-spec-v4.md) | Product spec + §13 implementation status + analytics catalogue |
+| [`docs/yggdrasil-prd-v3.md`](yggdrasil-prd-v3.md) | PRD, objectives, success metrics |
+| [`docs/analysis-schema.md`](analysis-schema.md) | Canonical `EntryAnalysis` schema |
+| [`docs/brand.md`](brand.md) | Brand + design detail |
+| [`docs/ticket-backlog-v1.md`](ticket-backlog-v1.md) | Legacy backlog (archived reference) |
 
-### Key external documentation
+### External docs
 
-| Resource | URL |
-|---|---|
-| Next.js App Router | https://nextjs.org/docs/app |
-| Firebase SDK v9+ (modular) | https://firebase.google.com/docs/web/modular-upgrade |
-| Firebase Auth | https://firebase.google.com/docs/auth/web/start |
-| Firestore | https://firebase.google.com/docs/firestore/quickstart |
-| Firestore vector search | https://firebase.google.com/docs/firestore/vector-search |
-| Firebase Cloud Functions v2 | https://firebase.google.com/docs/functions/get-started |
-| Firebase Emulator Suite | https://firebase.google.com/docs/emulator-suite |
-| Gemini API (`@google/generative-ai`) | https://ai.google.dev/api |
-| Stripe Node.js SDK | https://stripe.com/docs/api?lang=node |
-| Tailwind CSS v4 | https://tailwindcss.com/docs |
-| TypeScript Handbook | https://www.typescriptlang.org/docs/ |
-| Conventional Commits | https://www.conventionalcommits.org/en/v1.0.0/ |
-| React Testing Library | https://testing-library.com/docs/react-testing-library/intro |
+Next.js App Router · Firebase modular SDK · Firestore (+ vector search) · Cloud Functions v2 · Emulator Suite · Gemini API (`@google/generative-ai`) · Stripe Node SDK · Tailwind v4 · Conventional Commits · React Testing Library — all one search away; links in the framework docs.
 
 ---
 

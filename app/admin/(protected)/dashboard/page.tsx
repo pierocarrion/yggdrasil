@@ -1,4 +1,5 @@
 import { adminDb } from '@/lib/firebase/admin';
+import { AdminSignOutButton } from './SignOutButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -113,9 +114,12 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="mx-auto max-w-6xl p-8 space-y-10">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gold/80 mb-2">Admin</p>
-        <h1 className="font-display text-3xl text-foreground">Ops Dashboard</h1>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-gold/80 mb-2">Admin</p>
+          <h1 className="font-display text-3xl text-foreground">Ops Dashboard</h1>
+        </div>
+        <AdminSignOutButton />
       </div>
 
       {/* Summary cards */}

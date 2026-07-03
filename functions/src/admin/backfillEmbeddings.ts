@@ -8,9 +8,25 @@ export const backfillEmbeddings = onRequest(
     secrets: [geminiapikey],
   },
   async (req, res) => {
-  // Simple auth for admin endpoints if needed, but for this migration script
-  // we'll assume it's protected by Cloud IAM or meant to be run once manually.
-  
+  // v2 HTTP functions are publicly invokable by default, so guard explicitly:
+  // require a Firebase ID token belonging to a user with the `admin` custom
+  // claim. Do NOT rely on the URL being secret.
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    res.status(401).send('Unauthorized: missing bearer token.');
+    return;
+  }
+  try {
+    const decoded = await admin.auth().verifyIdToken(authHeader.slice('Bearer '.length));
+    if (decoded.admin !== true) {
+      res.status(403).send('Forbidden: admin claim required.');
+      return;
+    }
+  } catch {
+    res.status(401).send('Unauthorized: invalid token.');
+    return;
+  }
+
   try {
     const db = admin.firestore();
     const batchSize = 20;

@@ -30,7 +30,7 @@ export const DEFAULT_EMBEDDING_MODEL = 'gemini-embedding-001';
  */
 export interface GenerateTextOptions {
   /**
-   * The model to use. Defaults to `gemini-2.0-flash`.
+   * The model to use. Defaults to `gemini-3.5-flash` (DEFAULT_MODEL).
    * Only upgrade or override off flash with a documented reason (coding standard).
    */
   model?: string;

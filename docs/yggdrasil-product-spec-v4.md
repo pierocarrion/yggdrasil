@@ -1,7 +1,14 @@
 # Yggdrasil — Product Specification
 
-**Version 3.0 · June 2026**
-**Status: New stack scaffold started (minimal). Full rebuild in progress.**
+**Version 4.0 · July 2026**
+**Status: Core journaling, analysis pipeline, insights dashboard, Stripe billing, and marketing homepage live. Yggi chat UI, Roots, Hidden Connections UI, and admin ops access still in progress — see §13.**
+
+## Change history
+
+| Version | Date | Change |
+|---|---|---|
+| 3.0 | June 2026 | Firestore KNN vector search, analytics fallback path rename, event count correction, Knowledge Graph promoted to P1 |
+| 4.0 | July 2026 | Default models bumped to `gemini-3.5-flash` / `gemini-3.5-pro`; embedding model corrected to `gemini-embedding-001` (768-dim MRL truncation); webhook event list updated (`charge.refunded` for lifetime refunds); added §13 Implementation status |
 
 ---
 
@@ -186,7 +193,8 @@ A Studio tier is planned for a future release. It is not marketed, priced, or bu
 - Subscription status stored in Firestore `subscriptions/{userId}`
 - Tier read via `useSubscription()` hook, stored in context, enforced by `<FeatureGate>` component
 - Stripe Customer created lazily — on first checkout initiation, not on signup
-- Webhook handles: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`
+- Webhook handles: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`, `charge.refunded` (revokes lifetime access when the one-time payment is refunded)
+- Lifetime upgrades credit the unused portion of an active recurring subscription against the lifetime price and cancel the old subscription on checkout completion
 
 ---
 
@@ -200,7 +208,7 @@ Everything is Google-native. Nothing is carried over from the Lovable prototype.
 | Auth | Firebase Auth | Email/password + Google Sign-In |
 | Database | Firestore (incl. KNN vector search) | Replaces Supabase Postgres; KNN used for embeddings, semantic search, and RAG |
 | File storage | Firebase Storage | |
-| AI | Gemini API | `gemini-3.5-flash` default; `gemini-3.5-pro` / `gemini-embedding-exp` where needed |
+| AI | Gemini API | `gemini-3.5-flash` default; `gemini-3.5-pro` where needed; `gemini-embedding-001` for embeddings (truncated to 768 dims via MRL to match the Firestore vector index) |
 | Knowledge graph | Google Cirq | Quantum-inspired graph analysis for Hidden Connections |
 | Backend | Firebase Cloud Functions (TypeScript) | All new |
 | Hosting | Cloud Run | Containerised Next.js |
@@ -366,6 +374,33 @@ At time of rebuild start:
 - 2 paying users
 
 All growth metrics on the new stack are measured from zero.
+
+---
+
+## 13. Implementation status (July 2026)
+
+Snapshot of the codebase against this spec. "Live" means merged and functional on the current stack, not necessarily deployed.
+
+| Spec section | Feature | Status |
+|---|---|---|
+| 3.1 | Journal composer, mood sliders, entry types, thinking indicator | ✅ Live |
+| 3.1 | Voice notes + Gemini transcription (`transcribeAudio`) | ✅ Live |
+| 3.1 | Two-phase Gemini analysis (`analyzeEntry`: depth score → 13-field JSON, embeddings, edges, clusters) | ✅ Live |
+| 3.2 | Entries list + search bar | ✅ Live (full-text; semantic search UI pending) |
+| 3.3 | Roots tab (Goals, Journeys, Living Tree, Achievements) | 🔲 Stub page only — schemas exist in `types/goals.ts`, no UX |
+| 3.4 | Insights: streak calendar, mood charts, emotional patterns, cluster map, knowledge graph | ✅ Live (5 of 6 sections) |
+| 3.4 / 3.7 | Hidden Connections UI | 🔲 Not built. Backend `computeHiddenConnections` exists but Cirq path is a stub that always falls back to KNN, and nothing calls the function or renders results |
+| 3.5 | Yggi chat drawer | 🔲 Not built. `yggiChat` Cloud Function (RAG over Firestore KNN) exists but has no frontend caller. The marketing homepage demo (`/api/reflect`) is a separate, unauthenticated one-shot version |
+| 3.8 | Settings: 12 analytical framework toggles | ✅ Live |
+| 3.8 | Data export, account deletion | 🔲 Not built |
+| 3.9 | Onboarding seed-entry flow | 🔲 Not built |
+| 3.10 | Admin ops dashboard | ⚠️ Page exists (leads, demo activity, opsLogs) but is unreachable: it requires a `__session` cookie and an `admin` custom claim, and no code mints either |
+| 4 | Stripe: checkout, billing portal, webhook sync, lifetime upgrade with proration credit, refund revocation | ✅ Live |
+| 4 | Free-tier insight gating (5 analyzed entries, then `insightGated`) | ✅ Live (entries/goals/journey caps beyond insights not yet enforced) |
+| 5 | Cloud Run pipeline (Dockerfile, GitHub Actions deploy) | ✅ Live |
+| 6 | Analytics events | ⚠️ Partial — client events typed in `lib/analytics/client.ts`, server events (GA4 Measurement Protocol) in `functions/src/lib/analytics.ts`; Roots/onboarding events unused because their features don't exist |
+| — | Marketing homepage with live Yggi demo, abuse guards (device/IP/global rate limits), lead capture | ✅ Live (not in the original spec; added June 2026) |
+| — | Weekly AI report | 🔲 Stub (`generateWeeklyReport` returns a placeholder string) |
 
 ---
 

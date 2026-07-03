@@ -43,5 +43,7 @@ next-env.d.ts
 
 functions/node_modules
 functions/lib
-!.env.production
+
+# Committed env templates only — never the real .env.production
 !.env.production.example
+!functions/.env.production.example
