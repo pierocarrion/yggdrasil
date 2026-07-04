@@ -1,6 +1,12 @@
 import { Composer } from "@/components/journal/Composer";
 
-export default function JournalPage() {
+interface JournalPageProps {
+  searchParams: Promise<{ rootId?: string }>;
+}
+
+export default async function JournalPage({ searchParams }: JournalPageProps) {
+  const { rootId } = await searchParams;
+
   return (
     <div className="max-w-5xl mx-auto py-6 md:py-12 px-4 sm:px-6 w-full flex flex-col md:h-full">
       <div className="mb-6 md:mb-10">
@@ -10,7 +16,7 @@ export default function JournalPage() {
         </p>
       </div>
       <div className="flex-1">
-        <Composer />
+        <Composer linkRootId={rootId ?? null} />
       </div>
     </div>
   );

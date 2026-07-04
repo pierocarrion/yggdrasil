@@ -32,6 +32,7 @@ export interface JournalEntry {
   embedding?: any; // FirebaseFirestore.VectorValue (using any for cross-platform compatibility)
   embeddingGeneratedAt?: any; // FirebaseFirestore.Timestamp
   voiceNoteUrl?: string; // Storage path to the original voice recording (YGG-97)
+  linkedRootIds?: string[]; // Roots whose journey this entry belongs to
 }
 
 export interface AnalysisEntity {

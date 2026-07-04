@@ -127,6 +127,21 @@ export async function logInsightGenerated(
   });
 }
 
+export async function logBranchActionsGenerated(
+  userId: string,
+  rootId: string,
+  branchCount: number
+): Promise<void> {
+  await sendAnalyticsEvent('branch_actions_generated', {
+    userId,
+    eventParams: {
+      event_id: `branch_actions_${rootId}_${Date.now()}`,
+      root_id: rootId,
+      branch_count: branchCount,
+    },
+  });
+}
+
 export async function logHiddenConnectionsComputed(
   userId: string,
   path: 'cirq' | 'fallback_knn',

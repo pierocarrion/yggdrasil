@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { SubscriptionProvider } from '@/context/SubscriptionContext';
 import { useAuth } from '@/hooks/useAuth';
 import { FamiliarPatternToast } from '@/components/insights/FamiliarPatternToast';
+import { Logo } from '@/components/marketing/Logo';
 
 export default function DashboardLayout({
   children,
@@ -74,7 +75,7 @@ export default function DashboardLayout({
       ),
     },
     {
-      name: 'Roots',
+      name: 'Living Tree',
       href: '/roots',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
@@ -109,13 +110,10 @@ export default function DashboardLayout({
         {/* Desktop Left Sidebar Navigation */}
         <aside className="hidden md:flex flex-col w-[220px] bg-surface border-r border-border h-full shrink-0">
           {/* Wordmark and logo */}
-          <div className="h-16 px-6 flex items-center gap-2.5 border-b border-border/40">
-            <svg className="w-5.5 h-5.5 text-gold" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v18M12 9c2.5 0 5 1.5 5 4s-2.5 4-5 4M12 9C9.5 9 7 10.5 7 13s2.5 4 5 4M12 5c4 0 6 2 6 5s-2 5-6 5M12 5c-4 0-6 2-6 5s2 5 6 5" />
-            </svg>
-            <span className="font-display font-medium text-lg tracking-wider text-foreground select-none">
-              YGGDRASIL
-            </span>
+          <div className="h-16 px-6 flex items-center border-b border-border/40">
+            <Link href="/" aria-label="Yggdrasil home" className="transition-opacity hover:opacity-80">
+              <Logo size={22} showWordmark />
+            </Link>
           </div>
 
           {/* Navigation list */}
@@ -173,14 +171,9 @@ export default function DashboardLayout({
         <div className="flex-1 flex flex-col min-w-0 h-full">
           {/* Mobile Header Bar */}
           <header className="md:hidden h-14 bg-surface border-b border-border px-4 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-gold" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v18M12 9c2.5 0 5 1.5 5 4s-2.5 4-5 4M12 9C9.5 9 7 10.5 7 13s2.5 4 5 4M12 5c4 0 6 2 6 5s-2 5-6 5M12 5c-4 0-6 2-6 5s2 5 6 5" />
-              </svg>
-              <span className="font-display font-medium text-base tracking-wider text-foreground">
-                YGGDRASIL
-              </span>
-            </div>
+            <Link href="/" aria-label="Yggdrasil home" className="transition-opacity hover:opacity-80">
+              <Logo size={20} showWordmark />
+            </Link>
 
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-sm bg-muted flex items-center justify-center text-xs font-mono text-sage border border-border">

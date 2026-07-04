@@ -570,24 +570,29 @@ function NodePopover({ node, x, y, entries, containerRef }: { node: GraphNode, x
   const snippet = getRelevantSnippet(entry.content, node.label);
 
   const containerWidth = containerRef.current?.clientWidth || 800;
-  const containerHeight = 500;
-  
-  const cardWidth = 280;
+  const containerHeight = containerRef.current?.clientHeight || 600;
+
+  // Keep the card within the container even on narrow screens
+  const cardWidth = Math.min(280, containerWidth - 24);
   const cardHeight = 120; // approximate
-  
-  // Boundary check
+
+  // Prefer placing the card to the bottom-right of the node, but flip if it
+  // would overflow, then clamp so it never spills outside the container.
   let left = x + 20;
   let top = y + 20;
-  
-  if (left + cardWidth > containerWidth) {
+
+  if (left + cardWidth > containerWidth - 8) {
     left = x - cardWidth - 20;
   }
-  if (top + cardHeight > containerHeight) {
+  if (top + cardHeight > containerHeight - 8) {
     top = y - cardHeight - 20;
   }
 
+  left = Math.max(8, Math.min(left, containerWidth - cardWidth - 8));
+  top = Math.max(8, Math.min(top, containerHeight - cardHeight - 8));
+
   return (
-    <div 
+    <div
       className="absolute bg-background/95 backdrop-blur border border-border/50 rounded-xl p-4 shadow-xl pointer-events-none animate-in fade-in zoom-in-95 duration-200"
       style={{ left, top, width: cardWidth, zIndex: 50 }}
     >

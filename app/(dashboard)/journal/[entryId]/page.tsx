@@ -14,6 +14,7 @@ import { Composer } from '@/components/journal/Composer';
 import { toast } from 'sonner';
 import { logPaywallViewed } from '@/lib/analytics/client';
 import { UpgradeCallout } from '@/components/billing/UpgradeCallout';
+import { LinkRootPicker } from '@/components/roots/LinkRootPicker';
 
 interface EntryPageProps {
   params: Promise<{ entryId: string }>;
@@ -203,6 +204,9 @@ export default function EntryPage({ params }: EntryPageProps) {
           dangerouslySetInnerHTML={{ __html: entry.content }}
         />
       </article>
+
+      {/* Roots this entry belongs to */}
+      <LinkRootPicker entry={entry} />
 
       {/* Analysis Section */}
       <div className="pt-8 border-t border-border/40">

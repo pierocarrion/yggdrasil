@@ -6,6 +6,7 @@ export type BillingPeriod = 'monthly' | 'yearly' | 'lifetime';
 export type RecurringBillingPeriod = Exclude<BillingPeriod, 'lifetime'>;
 
 export const FREE_INSIGHT_LIMIT = 5;
+export const FREE_ROOTS_LIMIT = 5;
 
 let stripeClient: Stripe | null = null;
 

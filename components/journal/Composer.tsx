@@ -5,18 +5,40 @@ import { EntryTypeSelector, type EntryType } from "./EntryTypeSelector";
 import { MoodSliders, type MoodState } from "./MoodSliders";
 import { VoiceRecorder } from "./VoiceRecorder";
 import { createEntry, updateEntry } from "@/lib/entries";
+import { linkEntryToRoot } from "@/lib/roots";
 import { auth } from "@/lib/firebase/client";
-import { logEntryCreated } from "@/lib/analytics/client";
+import { logEntryCreated, logRootEntryLinked } from "@/lib/analytics/client";
 import { ThinkingIndicator } from "./ThinkingIndicator";
 import { toast } from "sonner";
 import type { JournalEntry } from "@/types/journal";
+import type { Root } from "@/types/goals";
+import { useFirestoreDoc } from "@/hooks/useFirestore";
 
 export interface ComposerProps {
   initialEntry?: JournalEntry;
   onSave?: (entryId: string) => void;
+  /** When set, a newly saved entry is woven into this Root's journey (Reflect flow). */
+  linkRootId?: string | null;
 }
 
-export function Composer({ initialEntry, onSave }: ComposerProps = {}) {
+/** Small banner showing which Root this reflection will be woven into. */
+function ReflectingOnRoot({ rootId }: { rootId: string }) {
+  const { data: root } = useFirestoreDoc<Root>(
+    auth.currentUser ? `users/${auth.currentUser.uid}/roots/${rootId}` : ''
+  );
+
+  if (!root) return null;
+
+  return (
+    <div className="px-4 sm:px-8 pt-4 pb-3 border-b border-border/40">
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-gold/25 bg-gold/5 px-3 py-1 text-xs text-gold/90">
+        ❦ Reflecting on: {root.title}
+      </span>
+    </div>
+  );
+}
+
+export function Composer({ initialEntry, onSave, linkRootId }: ComposerProps = {}) {
   const editorRef = useRef<HTMLDivElement>(null);
   const [title, setTitle] = useState(initialEntry?.title || "");
   const [content, setContent] = useState(initialEntry?.content || "");
@@ -152,13 +174,34 @@ export function Composer({ initialEntry, onSave }: ComposerProps = {}) {
           entryDate: new Date(entryDateStr).getTime()
         });
         toast.success("Entry saved successfully");
-        
+
         logEntryCreated({
           entry_type: entryType ?? undefined,
           has_mood: !!mood,
           tag_count: 0,
           word_count: wordCount
         });
+
+        // Reflect flow: weave the new entry into the Root it was written for
+        if (linkRootId) {
+          try {
+            await linkEntryToRoot(
+              auth.currentUser.uid,
+              linkRootId,
+              {
+                id: entryId,
+                title: title.trim(),
+                content,
+                createdAt: Date.now(),
+                entryDate: new Date(entryDateStr).getTime(),
+              },
+              'manual'
+            );
+            logRootEntryLinked({ source: 'manual' });
+          } catch (linkError) {
+            console.error('Failed to link entry to root', linkError);
+          }
+        }
       }
 
       // Clear composer if creating new
@@ -190,6 +233,7 @@ export function Composer({ initialEntry, onSave }: ComposerProps = {}) {
 
   return (
     <div className="w-full max-w-4xl mx-auto flex flex-col h-full min-h-[60vh] bg-surface-2 text-foreground border border-border/60 rounded-sm shadow-md overflow-hidden">
+      {linkRootId && !initialEntry && <ReflectingOnRoot rootId={linkRootId} />}
       {/* Toolbar */}
       <div className="flex items-center gap-1.5 p-3 border-b border-border/40 bg-surface">
         <button
@@ -280,7 +324,7 @@ export function Composer({ initialEntry, onSave }: ComposerProps = {}) {
       )}
 
       {/* Post-Composer Options */}
-      <div className="px-8 pb-8 flex flex-col gap-6">
+      <div className="px-4 sm:px-8 pb-8 flex flex-col gap-6">
         <MoodSliders mood={mood} onChange={setMood} />
         <EntryTypeSelector selectedType={entryType} onChange={setEntryType} />
       </div>

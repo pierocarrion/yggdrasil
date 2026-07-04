@@ -351,6 +351,7 @@ export function MarketingHome() {
       {/* ============ Fixed nav ============ */}
       <header
         ref={navRef}
+        className="mkt-nav"
         style={{
           position: 'fixed',
           top: 0,
@@ -360,23 +361,27 @@ export function MarketingHome() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '20px 36px',
+          gap: 16,
+          paddingTop: 20,
+          paddingBottom: 20,
           background: 'transparent',
           borderBottom: '1px solid transparent',
           transition: 'all 400ms var(--ease-gentle)',
         }}
       >
         <Logo size={22} showWordmark />
-        <nav style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
-          <a href="#features" onClick={(e) => goTo(e, 'features')} className="mkt-link">
-            Features
-          </a>
-          <a href="#demos" onClick={(e) => goTo(e, 'demos')} className="mkt-link">
-            The Practice
-          </a>
-          <a href="#pricing" onClick={(e) => goTo(e, 'pricing')} className="mkt-link">
-            Pricing
-          </a>
+        <nav style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+          <span className="mkt-nav-links">
+            <a href="#features" onClick={(e) => goTo(e, 'features')} className="mkt-link">
+              Features
+            </a>
+            <a href="#demos" onClick={(e) => goTo(e, 'demos')} className="mkt-link">
+              The Practice
+            </a>
+            <a href="#pricing" onClick={(e) => goTo(e, 'pricing')} className="mkt-link">
+              Pricing
+            </a>
+          </span>
           <Button size="sm" onClick={() => goTo(undefined, 'begin')}>
             Begin your practice
           </Button>
@@ -894,12 +899,10 @@ export function MarketingHome() {
       {/* ============ FOOTER ============ */}
       <footer style={{ borderTop: '1px solid var(--border-soft)', background: 'var(--surface)', padding: '56px 32px 40px' }}>
         <div
+          className="mkt-footer-grid"
           style={{
             maxWidth: 1120,
             margin: '0 auto',
-            display: 'grid',
-            gridTemplateColumns: 'minmax(220px,1.4fr) repeat(3,1fr)',
-            gap: 40,
           }}
         >
           <div>

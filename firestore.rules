@@ -52,14 +52,33 @@ service cloud.firestore {
         }
       }
       
-      match /goals/{goalId} {
-        allow read, update, delete: if request.auth != null && request.auth.uid == userId;
-        allow create: if request.auth != null && request.auth.uid == userId;
+      match /roots/{rootId} {
+        // gated/embedding fields are server-set (mirrors insightGated on
+        // entries) so the free-tier cap can't be cleared client-side.
+        function protectedRootFields() {
+          return ['gated', 'embedding', 'embeddingGeneratedAt'];
+        }
+
+        allow read, delete: if request.auth != null && request.auth.uid == userId;
+        allow create: if request.auth != null
+          && request.auth.uid == userId
+          && !request.resource.data.keys().hasAny(protectedRootFields());
+        allow update: if request.auth != null
+          && request.auth.uid == userId
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(protectedRootFields());
+
+        match /events/{eventId} {
+          allow read, create, delete: if request.auth != null && request.auth.uid == userId;
+          allow update: if false; // journey events are immutable facts
+        }
       }
 
-      match /journeys/{journeyId} {
-        allow read, update, delete: if request.auth != null && request.auth.uid == userId;
-        allow create: if request.auth != null && request.auth.uid == userId;
+      match /rootSuggestions/{suggestionId} {
+        allow read, delete: if request.auth != null && request.auth.uid == userId;
+        allow create: if false; // server only (Admin SDK bypasses rules)
+        allow update: if request.auth != null
+          && request.auth.uid == userId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'resolvedAt']);
       }
 
       match /achievements/{achievementId} {

@@ -13,6 +13,7 @@ const ENTRY_GUARD =
 import { FREE_INSIGHT_LIMIT, type BillingPeriod, type SubscriptionStatus } from '../stripe/shared';
 import { computeAndSaveEdges } from './computeConnections';
 import { computeAndSaveClusters } from './computeClusters';
+import { suggestRootLinksForEntry } from '../roots/suggestRootLinks';
 
 
 
@@ -195,6 +196,20 @@ ${entryData.content}
 
         logger.info(`[analyzeEntry] Recomputing clusters...`);
         await computeAndSaveClusters(userId);
+
+        // Match the entry against the user's Roots so it can be woven into a
+        // journey. Best-effort: a failure here must never fail the analysis.
+        try {
+          await suggestRootLinksForEntry(
+            userId,
+            entryId,
+            entryData,
+            embeddingValues,
+            analysisFields.themes ?? []
+          );
+        } catch (error) {
+          logger.warn('[analyzeEntry] Root link suggestion failed', { userId, entryId, error });
+        }
       }
 
       // Commit the analysis subcollection doc and the entry update together so

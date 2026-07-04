@@ -103,6 +103,26 @@ export const logLivingTreeViewed = () => {
   logEvent('living_tree_viewed');
 };
 
+export const logBranchActionsGenerated = (params: { branch_count: number }) => {
+  logEvent('branch_actions_generated', params);
+};
+
+export const logRootEntryLinked = (params: { source: 'suggestion' | 'manual' }) => {
+  logEvent('root_entry_linked', params);
+};
+
+export const logRootSuggestionDismissed = () => {
+  logEvent('root_suggestion_dismissed');
+};
+
+export const logBranchCompleted = (params: { source: 'manual' | 'ai' }) => {
+  logEvent('branch_completed', params);
+};
+
+export const logBranchWeekReset = (params: { done_count: number; total_count: number }) => {
+  logEvent('branch_week_reset', params);
+};
+
 // Onboarding & Retention
 export const logOnboardingStarted = () => {
   logEvent('onboarding_started');

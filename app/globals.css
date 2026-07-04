@@ -185,6 +185,49 @@
       display: block;
     }
   }
+
+  /* Fixed nav: comfortable padding on desktop, tighter on mobile */
+  .mkt-nav {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  @media (min-width: 720px) {
+    .mkt-nav {
+      padding-left: 36px;
+      padding-right: 36px;
+    }
+  }
+
+  /* Anchor links collapse on small screens; the CTA button always shows */
+  .mkt-nav-links {
+    display: none;
+  }
+  @media (min-width: 720px) {
+    .mkt-nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+    }
+  }
+
+  /* Footer link columns: stack on mobile, widen progressively */
+  .mkt-footer-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  @media (min-width: 560px) {
+    .mkt-footer-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+    }
+  }
+  @media (min-width: 860px) {
+    .mkt-footer-grid {
+      grid-template-columns: minmax(220px, 1.4fr) repeat(3, 1fr);
+      gap: 40px;
+    }
+  }
 }
 
 @keyframes ygg-bob {
