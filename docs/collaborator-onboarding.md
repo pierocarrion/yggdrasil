@@ -51,7 +51,7 @@ The product vision is five tabs plus a floating AI companion. **Not all of it is
 | **Journal** | Rich composer: entry types, two-slider mood, tags, voice notes. On save, a Cloud Function runs two-phase Gemini analysis. | ✅ Live |
 | **Entries** | Entry list + search bar. | ✅ Live (full-text; semantic search UI pending) |
 | **Insights** | Streak calendar, mood charts, emotional patterns, cluster map, knowledge graph. | ✅ Live (5 of 6 sections) |
-| **Roots** (Goals, Journeys, Living Tree, Achievements) | Growth/gamification. | 🔲 Stub page — schemas exist in `types/goals.ts`, no UX yet |
+| **Living Tree** (`/roots`) | Roots = values & goals (one `Root` type, `kind: 'value' \| 'goal'`). Each Root nests its own journey timeline (linked journal entries + events), **Rings** (dated milestones), **Branches** (weekly practices; "Grow branches" AI generation is Pro-only), **Fruit** (measurable outcome), and micro-wins. Entries link to Roots via AI suggestions (confirm/dismiss) or manually. | ✅ Live (July 2026, PR #17) |
 | **Settings** | 12 analytical-framework toggles. Data export + account deletion. | ⚠️ Framework toggles live; export/delete not built |
 | **Yggi Chat** | Floating RAG companion over journal history. | 🔲 Backend `yggiChat` function exists; **no frontend caller yet** |
 | **Hidden Connections** | Signature feature (see below). | 🔲 Backend exists (KNN only); no UI, Cirq is stubbed |
@@ -68,10 +68,12 @@ Two tiers: **Free** and **Pro**. Pro is any active paid `billingPeriod` (monthly
 |---|---|---|
 | Journal entries + AI extraction | ✅ | ✅ |
 | Entry insights | 5 analyzed entries, then gated | Unlimited |
+| Living Tree roots (each with its own journey) | 5 active | Unlimited |
+| "Grow branches" AI action generation | ❌ | ✅ |
 | Knowledge graph | Basic | Full |
 | Yggi, Hidden Connections, weekly digest, data export | ❌ (planned) | ✅ (planned) |
 
-Pricing: **$4.99/mo · $44.99/yr · $149 lifetime**. Only the **insight gate** (5 analyzed entries) is enforced in code today, inside `functions/src/gemini/analyzeEntry.ts` via `FREE_INSIGHT_LIMIT` + the `insightGated` flag. Journey/goal caps are **not** enforced yet — don't assume they are.
+Pricing: **$4.99/mo · $44.99/yr · $149 lifetime**. Two gates are enforced in code today: the **insight gate** (5 analyzed entries) in `functions/src/gemini/analyzeEntry.ts` (`FREE_INSIGHT_LIMIT` + the `insightGated` flag), and the **roots cap** (5 active) in `functions/src/roots/onRootWrite.ts` (`FREE_ROOTS_LIMIT` + a server-set `gated` flag Firestore rules stop clients clearing). "Grow branches" is Pro-gated both in the UI (`FeatureGate`) and server-side in `generateBranchActions`. Journeys have **no separate cap** — they're nested inside Roots.
 
 ### Hidden Connections — the signature feature (aspirational)
 
@@ -129,6 +131,8 @@ cp .env.production.example .env.local
 
 **Never commit `.env.local` or `.env.production`.** Both are gitignored. Only the `*.example` templates are tracked. If you ever commit a real secret, tell Isa immediately so keys can be rotated.
 
+> Note: the **public** Firebase web config is committed as in-code defaults in `lib/firebase/client.ts` (env vars override it). That's deliberate — it's public by design and it keeps clean-checkout builds (CI, Cloud Build) from crashing during prerender. It does **not** change the rule above for secrets.
+
 Variables you'll set locally (see `.env.production.example` for the full list):
 
 | Variable | For | In browser? |
@@ -184,7 +188,7 @@ yggdrasil/
 │   │   ├── layout.tsx                # redirects to /login if no user; wraps SubscriptionProvider
 │   │   ├── journal/                  # composer + entry detail ([entryId])
 │   │   ├── entries/                  # list + search
-│   │   ├── roots/                    # STUB page
+│   │   ├── roots/                    # Living Tree page (roots + journeys + branches)
 │   │   ├── insights/                 # insights dashboard
 │   │   ├── settings/                 # framework toggles + billing
 │   │   └── pricing/                  # plan selection / checkout entry
@@ -210,6 +214,8 @@ yggdrasil/
 │   ├── insights/                     # KnowledgeGraph, ClusterMap, MoodCharts, StreakCalendar,
 │   │                                 #   EmotionalPatterns, InsightCard, FamiliarPatternToast
 │   ├── journal/                      # Composer, MoodSliders, EntryTypeSelector, VoiceRecorder, ThinkingIndicator
+│   ├── roots/                        # RootCard, BranchList, JourneyTimeline, CreateRootDialog,
+│   │                                 #   SuggestionBanner, LinkRootPicker (Living Tree UI)
 │   └── marketing/                    # homepage: Home, ComposerDemo, GraphDemo, canvases, PlanCard, etc.
 │
 ├── context/                          # AuthContext, SubscriptionContext (React providers)
@@ -220,6 +226,8 @@ yggdrasil/
 │   ├── analytics/server.ts           # server-side analytics helper
 │   ├── auth.ts                       # sign-in/out wrappers + friendly error messages
 │   ├── entries.ts                    # createEntry / updateEntry / deleteEntry (client Firestore)
+│   ├── roots.ts                      # Living Tree client data layer (roots, branches, rings, linking)
+│   ├── rootsLogic.ts                 # pure helpers (week math, status cycling) — unit tested
 │   ├── clustering.ts                 # K-Means (client cluster map)
 │   ├── knowledgeGraph.ts             # buildKnowledgeGraph (used by the API route)
 │   ├── moodLabel.ts                  # polarity×intensity → "How We Feel" label
@@ -238,6 +246,9 @@ yggdrasil/
 │       ├── gemini/transcribeAudio.ts # voice-note transcription
 │       ├── gemini/computeConnections.ts, computeClusters.ts
 │       ├── insights/hiddenConnections.ts
+│       ├── roots/                    # onRootWrite (embedding + free cap), suggestRootLinks
+│       │                             #   (entry↔root matching, hooked into analyzeEntry),
+│       │                             #   generateBranchActions (Pro-only), scoring.ts (pure)
 │       ├── yggi/chat.ts
 │       ├── reports/weeklyReport.ts   # STUB
 │       ├── auth/onUserCreate.ts      # seeds users/{uid} on signup
@@ -354,7 +365,7 @@ import { logEntryCreated, logYggiChatOpened } from '@/lib/analytics/client';
 logEntryCreated({ entry_type, has_mood, tag_count, word_count });
 ```
 
-The full event catalogue (names + required props) lives in §6 of [`docs/yggdrasil-product-spec-v4.md`](yggdrasil-product-spec-v4.md). **Reality check:** events for unbuilt features (Roots, onboarding, Yggi) are defined but not firing because those features don't exist yet. If your task builds one of those features, wire its events as part of the task.
+The full event catalogue (names + required props) lives in §6 of [`docs/yggdrasil-product-spec-v4.md`](yggdrasil-product-spec-v4.md). **Reality check:** Living Tree events now fire (`goal_created`, `goal_completed`, `branch_actions_generated`, `root_entry_linked`, `branch_completed`, `branch_week_reset`, `living_tree_viewed`, …), but events for still-unbuilt features (onboarding, Yggi) are defined and idle. If your task builds one of those features, wire its events as part of the task.
 
 ---
 
@@ -365,8 +376,11 @@ users/{userId}                        profile; server-controlled: stripeCustomer
     │                                  entryCount, analyticsClientId (clients can't write these)
     ├── entries/{entryId}              JournalEntry (+ denormalized `analysis`, `embedding` vector)
     │     └── analysis/{analysisId}    EntryAnalysis — client READ only, server WRITE
-    ├── goals/{goalId}                 Goal
-    ├── journeys/{journeyId}           Journey
+    ├── roots/{rootId}                 Root (value|goal; branches, rings, fruit arrays;
+    │     │                            server-set: gated, embedding — clients can't write those)
+    │     └── events/{eventId}         JourneyEvent timeline — immutable (client create/delete, no update)
+    ├── rootSuggestions/{rootId_entryId}  AI entry↔root link suggestions — server-created;
+    │                                  clients may only flip status/resolvedAt
     ├── achievements/{achievementId}   Achievement
     ├── connections/{connectionId}     similarity edges — client READ only, server WRITE
     ├── weeklyReports/{reportId}       client READ only, server WRITE
@@ -393,7 +407,7 @@ Rules summary: users read/write only their own `users/{uid}/**` (minus the prote
 - `types/journal.ts` — `JournalEntry`, `EntryAnalysis` (6 top-level fields + nested `interpretation` with 7 sub-fields; framework/depth fields gated by `depthScore >= 3`), `EntryType`, `Mood`.
 - `types/subscription.ts` — `SubscriptionTier` (`'FREE' | 'PRO'`), `SubscriptionStatus`, `BillingPeriod` (`'monthly' | 'yearly' | 'lifetime'`).
 - `types/user.ts` — `UserProfile` (`tier`, `entitlement`, `billingPeriod`, `streakDays`, …).
-- `types/goals.ts` — `Goal`, `Journey`, `Achievement`.
+- `types/goals.ts` — `Root` (+ `BranchAction`, `Ring`, `RootFruit`), `JourneyEvent`, `RootLinkSuggestion`, `Achievement`. (The old standalone `Goal`/`Journey` types are gone — journeys are nested inside Roots.)
 - `types/insights.ts` — connection/cluster/report shapes.
 
 ---
@@ -601,7 +615,7 @@ If you want to be involved in the deployment side, tell Isa.
 | Task board | Linear (ask Isa for the workspace link) |
 | Comms | Discord server (ask Isa) · DM `@isa23_` for private/blocking issues |
 | Firebase project | `yggdrasil-497923` |
-| Production URL | https://yggdrasil-497923.web.app |
+| Production URL | https://yggdrasil-168739896450.us-central1.run.app/ |
 
 ### Docs in this repo
 
