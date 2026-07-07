@@ -234,3 +234,27 @@
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(7px); }
 }
+
+/* ── Onboarding: Yggi's sacred-geometry presence ──────────────────────
+   Yggi is a formless guide that "breathes" while present (XPE-ONBRD).
+   A gentle 4s scale/opacity swell — never a spinner, never a snap. */
+@keyframes yggi-breathe {
+  0%, 100% { opacity: 0.72; transform: scale(1); }
+  50%      { opacity: 1;    transform: scale(1.035); }
+}
+
+/* Teaser cards and step content rise in slowly, one at a time. */
+@keyframes yggi-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.ygg-breathe { animation: yggi-breathe 4s var(--ease-gentle) infinite; }
+.ygg-rise    { animation: yggi-rise 0.8s var(--ease-gentle) both; }
+
+/* Respect reduced motion everywhere in the flow: the geometry holds still,
+   fades become instant opacity swaps (a11y commitment 2p). */
+@media (prefers-reduced-motion: reduce) {
+  .ygg-breathe,
+  .ygg-rise { animation: none; }
+}
