@@ -382,6 +382,16 @@ export function MarketingHome() {
               Pricing
             </a>
           </span>
+          <a
+            href="/login"
+            onClick={(e) => {
+              e.preventDefault();
+              router.push('/login');
+            }}
+            className="mkt-link"
+          >
+            Sign in
+          </a>
           <Button size="sm" onClick={() => goTo(undefined, 'begin')}>
             Begin your practice
           </Button>

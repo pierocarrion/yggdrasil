@@ -22,7 +22,6 @@ import { AnalyzingStep } from './AnalyzingStep';
 import { HoldingStep } from './HoldingStep';
 import { RetryStep } from './RetryStep';
 import { InsightRevealStep } from './InsightRevealStep';
-import type { OnboardingPath } from './ThreePaths';
 
 type Step = 'welcome' | 'seed' | 'analyzing' | 'insight' | 'retry';
 
@@ -183,7 +182,7 @@ export function OnboardingFlow({ user }: OnboardingFlowProps) {
   }, [entryId, retrying, user.uid, beginAnalyzing]);
 
   const leaveTo = useCallback(
-    (route: OnboardingPath | '/journal', outcome: 'seeded' | 'skipped') => {
+    (route: string, outcome: 'seeded' | 'skipped') => {
       if (leaving) return;
       setLeaving(true);
       completeOnce(outcome);
@@ -191,6 +190,10 @@ export function OnboardingFlow({ user }: OnboardingFlowProps) {
     },
     [leaving, completeOnce, router],
   );
+
+  // The seed entry opened to its full insight (questions, depth, connections) —
+  // where "continue into the app" lands once they've written something.
+  const entryDetailPath = entryId ? `/journal/${entryId}` : '/journal';
 
   switch (step) {
     case 'welcome':
@@ -207,7 +210,7 @@ export function OnboardingFlow({ user }: OnboardingFlowProps) {
 
     case 'analyzing':
       return holdingActive ? (
-        <HoldingStep onContinue={() => leaveTo('/journal', 'seeded')} />
+        <HoldingStep onContinue={() => leaveTo(entryDetailPath, 'seeded')} />
       ) : (
         <AnalyzingStep />
       );
@@ -218,7 +221,7 @@ export function OnboardingFlow({ user }: OnboardingFlowProps) {
           entryText={seedText}
           timestamp={seedTimestamp}
           onRetry={handleRetry}
-          onContinue={() => leaveTo('/journal', 'seeded')}
+          onContinue={() => leaveTo(entryDetailPath, 'seeded')}
           retrying={retrying}
         />
       );
@@ -227,6 +230,7 @@ export function OnboardingFlow({ user }: OnboardingFlowProps) {
       return analysis ? (
         <InsightRevealStep
           analysis={analysis}
+          entryPath={entryDetailPath}
           onChoose={(route) => leaveTo(route, 'seeded')}
           choosing={leaving}
         />

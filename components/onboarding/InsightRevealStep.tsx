@@ -3,11 +3,13 @@
 import { useEffect, useRef, useState } from 'react';
 import type { EntryAnalysis } from '@/types/journal';
 import { SacredGeometry } from './SacredGeometry';
-import { ThreePaths, type OnboardingPath } from './ThreePaths';
+import { ThreePaths } from './ThreePaths';
 
 interface InsightRevealStepProps {
   analysis: EntryAnalysis;
-  onChoose: (route: OnboardingPath) => void;
+  /** Detail route of the seed entry, so "See your full reflection" opens it. */
+  entryPath: string;
+  onChoose: (route: string) => void;
   choosing?: boolean;
 }
 
@@ -22,7 +24,7 @@ function prefersReducedMotion(): boolean {
  * heading and the insight text reads before the tags. After a beat, the three
  * paths (2f/2l) rise beneath — one continuous scroll, nothing hidden.
  */
-export function InsightRevealStep({ analysis, onChoose, choosing = false }: InsightRevealStepProps) {
+export function InsightRevealStep({ analysis, entryPath, onChoose, choosing = false }: InsightRevealStepProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const [showPaths, setShowPaths] = useState(false);
 
@@ -116,7 +118,7 @@ export function InsightRevealStep({ analysis, onChoose, choosing = false }: Insi
 
       {showPaths && (
         <div className="ygg-rise mt-6 w-full">
-          <ThreePaths onChoose={onChoose} disabled={choosing} />
+          <ThreePaths entryPath={entryPath} onChoose={onChoose} disabled={choosing} />
         </div>
       )}
     </div>
