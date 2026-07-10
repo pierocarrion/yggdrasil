@@ -1,3 +1,5 @@
+> ⚠️ **OBSOLETE — do not work from this file.** Design-era collateral for the original Figma Make mockup prompts. The brand source of truth is [`docs/brand.md`](brand.md). Kept for historical reference only.
+
 # Yggdrasil — Figma Make Prompt Suite
 ### Complete phased prompts for app mockup design
 **Screen Sage Studios · Build with Gemini XPRIZE submission**
@@ -14,7 +16,7 @@
 
 ```
 PRODUCT: Yggdrasil — AI-powered semantic journaling web app
-TAGLINE: "Turn your journal into a living map of your mind."
+TAGLINE: "Your journal, grown into a living map of you."
 STUDIO: Screen Sage Studios
 COMPETITION: Build with Gemini XPRIZE (Education & Human Potential, deadline Aug 17 2026)
 
@@ -269,8 +271,8 @@ Layout: vertically centered. Left 55% is text. Right 45% is the hero visual.
 
 LEFT — Text block (max-width 560px):
 - Eyebrow label: "Screen Sage Studios presents" in label/nav text/muted, letter-spaced
-- Headline: "Turn your journal into a living map of your mind."
-  Display/hero, Cormorant Garamond 300, two lines. "living map of your mind" on line 2.
+- Headline: "Your journal, grown into a living map of you."
+  Display/hero, Cormorant Garamond 300, two lines. "living map of you" on line 2.
   The word "living" has a subtle underline in accent/gold (not full-width — just that word).
 - Subhead: "Yggdrasil reads what you write, finds the patterns you can't see, and
   reflects your inner world back to you."
@@ -977,7 +979,7 @@ Card 2: Cirq Engine
 Card 3: Embedding Pipeline
   Status: accent/sage dot "Operational"
   "212 embeddings today" — large mono/data.
-  Sub: "gemini-embedding-exp" — mono/data text/muted.
+  Sub: "gemini-embedding-001" — mono/data text/muted.
 
 Card 4: Weekly Report
   Status: "Next report: Jun 15" — mono/data.
@@ -1091,3 +1093,12 @@ EXPORT NOTES FOR DEVELOPERS:
 
 *Document prepared for Yggdrasil / Screen Sage Studios · Build with Gemini XPRIZE 2026*
 *Generated June 2026 · All prompts are self-contained and additive.*
+
+---
+
+## Change history
+
+| Version | Date | Change |
+|---|---|---|
+| 1.0 | June 2026 | Initial prompt suite |
+| 1.1 | July 2026 | Marked OBSOLETE (brand source of truth is docs/brand.md); swept old tagline and gemini-embedding-exp so stale copy can't be pasted into designs |

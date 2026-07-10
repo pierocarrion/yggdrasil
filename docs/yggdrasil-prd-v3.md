@@ -3,7 +3,7 @@
 **Project:** Yggdrasil (full product — new stack)
 **Author:** Isa
 **Status:** In development — new stack scaffold started (minimal)
-**Version:** 3.0
+**Version:** 3.1
 
 ---
 
@@ -14,6 +14,7 @@
 | 1.0 | June 2026 | Isa | First draft |
 | 2.0 | June 2026 | Isa | Removed Studio tier from user-facing scope; added Studio future-state paragraph; updated mood tracking to 2-slider system (polarity × intensity, 0–10, derived label); removed company name references; corrected free tier to Free + Pro only |
 | 3.0 | June 2026 | Isa | Switched vector search from Vertex AI to Firestore KNN to reduce infrastructure costs (Vertex AI remains migration target at scale); updated analytics fallback path value from `fallback_vertex` to `fallback_knn`; corrected analytics event count (25 → 29); fixed weekly AI reports target start date (July 26); added Knowledge Graph as explicit P1 requirement; clarified Gemini integration as single call with 2-phase process |
+| 3.1 | July 2026 | Isa | Model defaults corrected to gemini-3.5-flash / gemini-embedding-001; tagline updated; Goals/Journeys replaced by the Living Tree model (see spec §3.3) |
 
 ---
 
@@ -59,7 +60,7 @@ The prototype (Lovable, React + TypeScript + Supabase) is reference material onl
 
 ## Messaging
 
-**Tagline:** Turn your journal into a living map of your mind.
+**Tagline:** Your journal, grown into a living map of you.
 
 **One-sentence value prop:** Yggdrasil reads what you write, finds the patterns you can't see, and reflects your inner world back to you through AI-powered insights, a living knowledge graph, and a companion that knows your whole story.
 
@@ -73,7 +74,7 @@ The prototype (Lovable, React + TypeScript + Supabase) is reference material onl
 |---|---|
 | P0 complete (scaffold, auth, Gemini, Stripe, Analytics, Cloud Run) | June 21, 2026 |
 | P1 design complete (onboarding, core UI, Yggi) | July 4, 2026 |
-| P1 engineering complete (Hidden Connections, Insights, Roots, Longitudinal view) | July 18, 2026 |
+| P1 engineering complete (Hidden Connections, Insights, Living Tree, Longitudinal view) | July 18, 2026 |
 | AI-native ops dashboard live | July 26, 2026 |
 | Real users active, revenue evidence accumulating | August 10, 2026 |
 | Submission package assembled | August 17, 2026 |
@@ -114,7 +115,7 @@ Rosa downloads Yggdrasil on a Saturday morning. She has five minutes. The onboar
 
 ### Scenario 4 — Goal suggestion from journal patterns
 
-Rosa has been journaling for three weeks. On a Wednesday, she opens the Roots tab and sees a suggested goal: "Establish a boundary at work." Below it: "Suggested based on patterns in 4 of your recent entries." She taps it and reads the reasoning — Yggdrasil found a recurring theme of overcommitment in her recent writing. She accepts the goal with one tap. That week, two of her entries are automatically linked to the goal by Yggdrasil. At the end of the month, she marks it complete.
+Rosa has been journaling for three weeks. On a Wednesday, she opens the Living Tree tab and sees a suggested goal: "Establish a boundary at work." Below it: "Suggested based on patterns in 4 of your recent entries." She taps it and reads the reasoning — Yggdrasil found a recurring theme of overcommitment in her recent writing. She accepts the goal with one tap. That week, two of her entries are automatically linked to the goal by Yggdrasil. At the end of the month, she marks it complete.
 
 ---
 
@@ -134,7 +135,7 @@ As any user, I want to be able to sign up, log in, and reach the main app so tha
 **P0-2: Gemini integration**
 As Rosa, I want my entries to be analysed automatically on save so that I receive insights without having to do anything manually.
 - Single Gemini API call per entry on save (async, background); two-phase: depth scoring (1–11) then one comprehensive prompt returning a 13-field JSON object
-- `gemini-2.0-flash` default; upgrade only with documented reason
+- `gemini-3.5-flash` default; upgrade only with documented reason
 - `insight_generated` Analytics event fires on completion
 - Subtle "Yggdrasil is thinking…" indicator shown to user post-save; not a blocking spinner
 
@@ -146,7 +147,7 @@ As a user who has used their 5 free entries, I want to be able to subscribe to P
 - `create-checkout` Cloud Function accepts `plan_type: 'monthly' | 'yearly' | 'lifetime'`
 - `stripe-webhook` handles: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`
 - Subscription status stored in Firestore `subscriptions/{userId}`; enforced by `<FeatureGate>` component
-- Free tier limits enforced per-feature by `check-trial-status` (counts analyzed entries, journeys, goals against tier caps)
+- Free tier limits enforced per-feature by `check-trial-status` (counts analyzed entries and Living Tree roots against tier caps; the trunk is nested in its root, so there is no separate journey cap)
 - `paywall_viewed`, `subscription_started` Analytics events fire at the appropriate steps
 
 **P0-4: Firebase Analytics**
@@ -198,14 +199,12 @@ As Rosa, I want to ask Yggi about my journal so that I can explore my patterns i
 - Tone: warm, reflective, spiritually intelligent — not clinical, not a mood tracker assistant
 - `yggi_chat_opened`, `yggi_message_sent` (with `conversation_turn_count`) Analytics events
 
-**P1-5: Roots tab**
-As Rosa, I want to set goals and start Journeys that are informed by my journal so that my growth work is grounded in what I'm actually experiencing.
-- **Goals** and **Journeys** are distinct data types with separate Firestore schemas and separate UX
-- Goals: end-result focused; create, track, complete; AI suggests goals from detected journal patterns
-- Journeys: process-focused; users start a Journey and add entries to it over time; not destination-focused
-- Living Tree: visual progression metaphor, grows with consistent journaling
+**P1-5: Living Tree tab**
+As Rosa, I want my values and goals to grow out of my journal so that my growth work is grounded in what I'm actually experiencing.
+- The Living Tree has five sections: **Roots** — the foundational units, values and goals the user is growing (one entity, distinguished by `kind`; AI suggests new roots from detected journal patterns); **Trunk** — the journey, a timeline of journal entries linked to a root plus events like milestones reached and weekly wins (there is no standalone "Journey" type); **Rings** — dated milestones the root grows toward; **Branches** — this week's practices/habits toward the root (Pro-only "Grow branches" generator; free users add branches manually); **Fruit** — the measurable proof of progress.
 - Achievements: milestone badges unlocked by streaks, completions, and usage depth
-- `goal_created`, `goal_completed`, `journey_started`, `achievement_unlocked`, `living_tree_viewed` Analytics events
+- `goal_created`, `goal_completed`, `journey_started`, `achievement_unlocked`, `living_tree_viewed` Analytics events (event names are frozen literals)
+- Authoritative model: product spec §3.3.
 
 **P1-6: Insights tab**
 As Rosa, I want to see how my themes, emotions, and patterns have changed over time so that I can understand my own growth.
@@ -310,8 +309,8 @@ No. Isa owns all architecture, integration, and technical decisions. If a task s
 **Q: What happens if Cirq is never reliable enough to run?**
 The fallback to Firestore KNN cosine similarity is silent and produces identical UI. The XPRIZE submission needs to show Cirq ran at least some of the time — hence the 30% target. If Cirq cannot reach 30% by submission, we investigate before the deadline.
 
-**Q: Why are Goals and Journeys separate data types?**
-They represent fundamentally different user behaviours. Goals are destination-focused: the user defines an end state and tracks completion. Journeys are process-focused: the user collects entries along the way without a fixed endpoint. Conflating them produces UX that fits neither use case well and a data model that can't cleanly power AI suggestions for either.
+**Q: Why aren't Goals and Journeys separate data types?**
+Earlier versions of this PRD modelled them separately. The Living Tree consolidates them: a root — a value or goal, distinguished by `kind` — is the single foundational unit, and each root carries its own trunk (the journey timeline of linked entries and events). One entity powers AI suggestions cleanly and avoids two parallel UX surfaces. Authoritative model: product spec §3.3.
 
 **Q: What is Studio and when will it be built?**
 Studio is a future tier, likely targeting therapists or other practitioners who want to create shared spaces with clients or manage multiple journaling users. Therapy Tom is the client side of that relationship. Nothing is built for Studio during the XPRIZE sprint — the only constraint is that the data model should not actively prevent it later.

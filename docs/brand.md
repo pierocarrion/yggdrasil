@@ -4,6 +4,14 @@ This document serves as the single source of truth for the visual identity and b
 
 ---
 
+## Tagline
+
+> Your journal, grown into a living map of you.
+
+*Usage:* display treatment is Cormorant Garamond Light; "living map of you" carries the emphasis.
+
+---
+
 ## 1. Brand Voice & Philosophy
 
 *   **Warm, Elegant, Gentle:** The tone of the writing, the UI transitions, and the responses must feel like a trusted companion. It is inviting and slow.
@@ -62,3 +70,12 @@ Google Fonts are loaded via Next.js `next/font/google` and exposed as Tailwind p
 *   **Borders:** Subtle border-radius (`0.25rem` or `4px` represented by `rounded-sm`). Avoid large pill shapes (`rounded-full`) on structural controls.
 *   **Hover states:** Micro-animations should be slow and deliberate (300–500ms easing). Nothing should pop, snap, or bounce. Elements should breathe.
 *   **Gold Detail:** Hovering over primary action buttons reveals a subtle left-edge 2px gold border indicator (`before:bg-gold`), providing an organic tactile response.
+
+---
+
+## Change history
+
+| Version | Date | Change |
+|---|---|---|
+| 1.0 | — | Initial brand doc |
+| 1.1 | July 2026 | Added tagline section |

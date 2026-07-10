@@ -210,7 +210,7 @@ Deeper psychological or spiritual themes, including unconscious material, shadow
 
 ## Optional fields (gated by user Settings — not part of the 13)
 
-These 4 fields are returned only when the user has enabled the corresponding setting. They are not part of the core 13-field object and must never be treated as required.
+These 4 fields exist on the `EntryAnalysis` type for when the corresponding settings are enabled. They are not part of the core 13-field object and must never be treated as required. **Note (verified July 2026):** the current `analyzeEntry.ts` prompt does not request these fields, so they are never populated today — treat them as reserved.
 
 ```ts
 chakra_tags?: string[]
@@ -296,6 +296,11 @@ users/{userId}/entries/{entryId}/analysis/{analysisId}
   createdAt: Timestamp
 ```
 
+Two behaviours to know (verified against `analyzeEntry.ts`, July 2026):
+
+- **Denormalized copy** — the same analysis object is also written onto the parent entry doc as `entry.analysis`, so graph/API reads don't fan out to the subcollection. If you change the shape, update both writes.
+- **Free insight gate** — when the free-tier gate applies (`insightGated: true`), the persisted analysis is trimmed to `depthScore` plus the 6 top-level fields only; the `interpretation` object is omitted entirely.
+
 ## `analysisStatus` on the parent entry
 
 The parent `entries/{entryId}` document tracks analysis state via `analysisStatus`:
@@ -312,8 +317,8 @@ The entry is never deleted on failure — only `analysisStatus` changes to `'err
 
 ## Prompt requirements for `analyzeEntry.ts`
 
-- Instruct the model to return **JSON only** — no prose, no markdown fences.
-- Strip fences defensively before `JSON.parse()`: `text.replace(/^```json\n?/i, '').replace(/```$/i, '').trim()`
+- Instruct the model to return **JSON only** — no prose, no markdown fences — and request `responseMimeType: 'application/json'`.
+- Parse defensively before `JSON.parse()`: Phase 1 strips fences (`text.replace(/^```json\n?/i, '').replace(/```$/i, '').trim()`); Phase 2 extracts the first `{…}` block via `response.match(/\{[\s\S]*\}/)`.
 - Phase 2 prompt must specify exact field names as listed above.
 - Pass `depthScore` into the Phase 2 prompt so the model knows whether to populate `frameworks_applied` and `depth_analysis`.
 - Pass the list of user-enabled frameworks (from Settings) when `depthScore >= 3`; omit those fields from the prompt entirely when `depthScore < 3`.
@@ -321,3 +326,12 @@ The entry is never deleted on failure — only `analysisStatus` changes to `'err
 ---
 
 *Last updated: June 2026 · Owner: Isa · Do not edit field names after `analyzeEntry.ts` is wired to downstream features.*
+
+---
+
+## Change history
+
+| Version | Date | Change |
+|---|---|---|
+| 1.0 | June 2026 | Initial schema doc |
+| 1.1 | July 2026 | Changelog added; verified against analyzeEntry.ts — corrected drift: Phase 2 JSON extraction (regex block match, not fence strip), gated-analysis trimming, denormalized `entry.analysis` copy, optional chakra/tarot/geometry/archetype fields marked reserved (not requested by the current prompt) |

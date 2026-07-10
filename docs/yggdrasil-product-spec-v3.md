@@ -1,3 +1,5 @@
+> ⚠️ **SUPERSEDED by yggdrasil-product-spec-v4.md.** Retained for history; every technical detail below may be wrong.
+
 # Yggdrasil — Product Specification
 
 **Version 3.0 · June 2026**
@@ -5,7 +7,7 @@
 
 ---
 
-> *Turn your journal into a living map of your mind.*
+> *Your journal, grown into a living map of you.*
 
 ---
 
@@ -200,7 +202,7 @@ Everything is Google-native. Nothing is carried over from the Lovable prototype.
 | Auth | Firebase Auth | Email/password + Google Sign-In |
 | Database | Firestore (incl. KNN vector search) | Replaces Supabase Postgres; KNN used for embeddings, semantic search, and RAG |
 | File storage | Firebase Storage | |
-| AI | Gemini API | `gemini-2.0-flash` default; `gemini-2.0-pro` / `gemini-embedding-exp` where needed |
+| AI | Gemini API | `gemini-3.5-flash` default; `gemini-3.5-pro` / `gemini-embedding-001` where needed |
 | Knowledge graph | Google Cirq | Quantum-inspired graph analysis for Hidden Connections |
 | Backend | Firebase Cloud Functions (TypeScript) | All new |
 | Hosting | Cloud Run | Containerised Next.js |
@@ -335,7 +337,7 @@ Isa leads and owns all architecture, integration, and technical decisions. Colla
 - Firebase SDK v9+ modular imports only
 - Write complete implementations — no stubs, no TODOs, no scaffolding
 - All AI calls through the Gemini API — no other LLM providers
-- Default model: `gemini-2.0-flash` — only upgrade if there is a documented reason
+- Default model: `gemini-3.5-flash` — only upgrade if there is a documented reason
 
 ---
 
@@ -370,3 +372,12 @@ All growth metrics on the new stack are measured from zero.
 ---
 
 *Yggdrasil · Next.js + Firebase + Gemini API + Google Cirq + Cloud Run · Education & Human Potential · Deadline: August 17, 2026*
+
+---
+
+## Change history
+
+| Version | Date | Change |
+|---|---|---|
+| 3.0 | June 2026 | Final v3 edition |
+| 3.0.1 | July 2026 | Marked SUPERSEDED by yggdrasil-product-spec-v4.md; stale tagline and gemini-2.0-era model strings updated to current |

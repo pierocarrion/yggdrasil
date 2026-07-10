@@ -1,7 +1,7 @@
 # Yggdrasil — Product Specification
 
-**Version 4.0 · July 2026**
-**Status: Core journaling, analysis pipeline, insights dashboard, Stripe billing, and marketing homepage live. Yggi chat UI, Roots, Hidden Connections UI, and admin ops access still in progress — see §13.**
+**Version 4.1 · July 2026**
+**Status: Core journaling, analysis pipeline, insights dashboard, Living Tree tab, onboarding, admin ops dashboard, Stripe billing, and marketing homepage live. Yggi chat UI, Hidden Connections UI, data export, and the weekly AI report still in progress — see §13.**
 
 ## Change history
 
@@ -9,10 +9,11 @@
 |---|---|---|
 | 3.0 | June 2026 | Firestore KNN vector search, analytics fallback path rename, event count correction, Knowledge Graph promoted to P1 |
 | 4.0 | July 2026 | Default models bumped to `gemini-3.5-flash` / `gemini-3.5-pro`; embedding model corrected to `gemini-embedding-001` (768-dim MRL truncation); webhook event list updated (`charge.refunded` for lifetime refunds); added §13 Implementation status |
+| 4.1 | July 2026 | Living Tree terminology adopted (Roots · Trunk · Rings · Branches · Fruit); tagline updated to "Your journal, grown into a living map of you."; §13 re-verified |
 
 ---
 
-> *Turn your journal into a living map of your mind.*
+> *Your journal, grown into a living map of you.*
 
 ---
 
@@ -81,16 +82,17 @@ The two values combine to produce a derived label shown to the user, drawn from 
 - Tag browser for navigating by extracted topic
 - Each entry links to its generated insight card
 
-### 3.3 Roots tab — Values, Goals & Growth
+### 3.3 Living Tree tab
 
-A **Root** is the single foundational unit: a value or goal the user is growing. One entity, one card, distinguished by `kind`:
+The **Living Tree** is the growth model: the user's journal, grown into a living map of who they are becoming. Each tree has five sections, always described in this order:
 
-- **Kind** — `value` (an ongoing practice that is tended, never "completed") or `goal` (an achievement that can be completed). AI suggests new roots based on detected journal patterns.
-- **Journey (Trunk)** — each Root carries its own journey: a timeline of the journal entries linked to it (as progress reports) plus events like milestones reached and weekly wins. Entries are linked by AI suggestion or manually; there is no standalone "Journey" type.
-- **Branches** — this week's practices/habits toward the Root. The Pro-only "Grow branches" generator turns the self-awareness in the linked entries' analyses into concrete weekly actions; free users add branches manually.
-- **Rings & Fruit** — Rings are dated milestones the Root grows toward; Fruit is the measurable proof of progress.
-- **Living Tree** — gamified progression metaphor. The tree grows as the user journals consistently. Visual representation of habit strength.
-- **Achievements** — milestone badges unlocked by streaks, root completions, and usage depth.
+- **Roots** — the foundational units: the values and goals the user is growing. One entity, one card, distinguished by `kind`: `value` (an ongoing practice that is tended, never "completed") or `goal` (an achievement that can be completed). AI suggests new roots from detected journal patterns.
+- **Trunk** — the journey: a timeline of the journal entries linked to a root (as progress reports) plus events like milestones reached and weekly wins. Entries link by AI suggestion or manually; there is no standalone "Journey" type.
+- **Rings** — dated milestones the root grows toward.
+- **Branches** — this week's practices/habits toward the root. The Pro-only "Grow branches" generator turns the self-awareness in linked entries' analyses into concrete weekly actions; free users add branches manually.
+- **Fruit** — the measurable proof of progress.
+
+The tree is also the gamified progression metaphor: it grows as the user journals consistently — a visual representation of habit strength. **Achievements** (milestone badges) unlock via streaks, root completions, and usage depth.
 
 ### 3.4 Insights tab
 
@@ -167,7 +169,7 @@ There are two user-facing tiers: Free and Pro. A future Studio tier is noted bel
 | Journal entries | Unlimited | Unlimited |
 | AI extraction (themes, emotions, etc.) | ✅ | ✅ |
 | Entry insights | 5 trial entries, then paywalled | Unlimited |
-| Roots (values & goals, each with its own journey) | 5 | Unlimited |
+| Living Tree roots (values & goals, each with a trunk) | 5 | Unlimited |
 | AI branch suggestions ("Grow branches") | ❌ | ✅ |
 | Knowledge graph | Basic | Full |
 | Yggi companion | ❌ | ✅ |
@@ -175,7 +177,7 @@ There are two user-facing tiers: Free and Pro. A future Studio tier is noted bel
 | Weekly digest | ❌ | ✅ |
 | Data export | ❌ | ✅ |
 
-Journeys are no longer a separately capped type: each Root carries its own journey timeline, so the roots cap covers them. Free tier limits are enforced per-feature — entry insights gate after 5 analyzed entries (`insightGated`), and active roots are capped at `FREE_ROOTS_LIMIT` (5, in `functions/src/stripe/shared.ts`; over-cap roots are flagged `gated` server-side). AI branch generation is Pro-only. Hitting a limit triggers the `/pricing` paywall.
+There is no separately capped journey type: each root carries its own trunk (the journey timeline), so the roots cap covers it. Free tier limits are enforced per-feature — entry insights gate after 5 analyzed entries (`insightGated`), and active roots are capped at `FREE_ROOTS_LIMIT` (5, in `functions/src/stripe/shared.ts`; over-cap roots are flagged `gated` server-side). AI branch generation is Pro-only. Hitting a limit triggers the `/pricing` paywall.
 
 ### Pricing
 
@@ -379,7 +381,7 @@ All growth metrics on the new stack are measured from zero.
 
 ---
 
-## 13. Implementation status (July 2026)
+## 13. Implementation status (verified July 9, 2026)
 
 Snapshot of the codebase against this spec. "Live" means merged and functional on the current stack, not necessarily deployed.
 
@@ -389,19 +391,20 @@ Snapshot of the codebase against this spec. "Live" means merged and functional o
 | 3.1 | Voice notes + Gemini transcription (`transcribeAudio`) | ✅ Live |
 | 3.1 | Two-phase Gemini analysis (`analyzeEntry`: depth score → 13-field JSON, embeddings, edges, clusters) | ✅ Live |
 | 3.2 | Entries list + search bar | ✅ Live (full-text; semantic search UI pending) |
-| 3.3 | Roots tab (Roots = values & goals, each with a nested journey; Branches, Rings, Fruit, Living Tree, Achievements) | ✅ Live — `Root` schema in `types/goals.ts`, UI in `app/(dashboard)/roots/`, AI branch generation + entry-link suggestions in `functions/src/roots/` |
+| 3.3 | Living Tree tab (Roots = values & goals, each with a trunk; Rings, Branches, Fruit, Achievements) | ✅ Live — `Root` schema in `types/goals.ts`, UI in `app/(dashboard)/roots/`, AI branch generation + entry-link suggestions in `functions/src/roots/` |
 | 3.4 | Insights: streak calendar, mood charts, emotional patterns, cluster map, knowledge graph | ✅ Live (5 of 6 sections) |
 | 3.4 / 3.7 | Hidden Connections UI | 🔲 Not built. Backend `computeHiddenConnections` exists but Cirq path is a stub that always falls back to KNN, and nothing calls the function or renders results |
 | 3.5 | Yggi chat drawer | 🔲 Not built. `yggiChat` Cloud Function (RAG over Firestore KNN) exists but has no frontend caller. The marketing homepage demo (`/api/reflect`) is a separate, unauthenticated one-shot version |
 | 3.8 | Settings: 12 analytical framework toggles | ✅ Live |
 | 3.8 | Data export, account deletion | 🔲 Not built |
-| 3.9 | Onboarding seed-entry flow | 🔲 Not built |
-| 3.10 | Admin ops dashboard | ⚠️ Page exists (leads, demo activity, opsLogs) but is unreachable: it requires a `__session` cookie and an `admin` custom claim, and no code mints either |
+| 3.9 | Onboarding seed-entry flow | ✅ Live — `/onboarding` "threshold ritual" (welcome → seed prompt → analysis → insight reveal, with skip paths); fires `onboarding_started` / `onboarding_completed` / `seed_entry_analyzed`. Merged July 2026 |
+| 3.10 | Admin ops dashboard | ✅ Live — gated by a `__session` cookie plus an `admin` custom claim; `/admin/login` exchanges an ID token for the cookie via `/api/auth/session`, and the claim is minted with `scripts/set-admin-claim.mjs` |
 | 4 | Stripe: checkout, billing portal, webhook sync, lifetime upgrade with proration credit, refund revocation | ✅ Live |
-| 4 | Free-tier insight gating (5 analyzed entries, then `insightGated`) | ✅ Live. Roots cap (5, `FREE_ROOTS_LIMIT`) enforced server-side via the `gated` flag; journeys are nested in roots so have no separate cap |
-| 5 | Cloud Run pipeline (Dockerfile, GitHub Actions deploy) | ✅ Live |
-| 6 | Analytics events | ⚠️ Partial — client events typed in `lib/analytics/client.ts`, server events (GA4 Measurement Protocol) in `functions/src/lib/analytics.ts`; Roots/onboarding events unused because their features don't exist |
+| 4 | Free-tier insight gating (5 analyzed entries, then `insightGated`) | ✅ Live. Roots cap (5, `FREE_ROOTS_LIMIT`) enforced server-side via the `gated` flag; the trunk is nested in its root so has no separate cap |
+| 5 | Cloud Run pipeline (Dockerfile; deploys via Cloud Build triggers) | ✅ Live — the GitHub Actions deploy workflow was removed as dead config (July 2026); only `ci.yml` remains in GitHub Actions |
+| 6 | Analytics events | ⚠️ Partial — client events typed in `lib/analytics/client.ts`, server events (GA4 Measurement Protocol) in `functions/src/lib/analytics.ts`. Living Tree and onboarding events are wired (July 2026); events for unbuilt surfaces (Yggi chat, Hidden Connections UI, data export) remain unused |
 | — | Marketing homepage with live Yggi demo, abuse guards (device/IP/global rate limits), lead capture | ✅ Live (not in the original spec; added June 2026) |
+| — | Entry-milestone NPS feedback prompt | ✅ Live (not in the original spec; added July 2026) |
 | — | Weekly AI report | 🔲 Stub (`generateWeeklyReport` returns a placeholder string) |
 
 ---
