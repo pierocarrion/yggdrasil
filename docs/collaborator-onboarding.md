@@ -3,6 +3,14 @@
 **Last updated: July 2026**
 **Deadline: August 17, 2026 — Build with Gemini XPRIZE**
 
+## Change history
+
+| Edition | Change |
+|---|---|
+| June 2026 | Initial guide |
+| July 2026 | Restructure |
+| July 2026 (2) | Living Tree terminology; model sweep; FIX-workstream callout; deploy.yml drift resolved |
+
 ---
 
 ## Table of Contents
@@ -51,7 +59,7 @@ The product vision is five tabs plus a floating AI companion. **Not all of it is
 | **Journal** | Rich composer: entry types, two-slider mood, tags, voice notes. On save, a Cloud Function runs two-phase Gemini analysis. | ✅ Live |
 | **Entries** | Entry list + search bar. | ✅ Live (full-text; semantic search UI pending) |
 | **Insights** | Streak calendar, mood charts, emotional patterns, cluster map, knowledge graph. | ✅ Live (5 of 6 sections) |
-| **Living Tree** (`/roots`) | Roots = values & goals (one `Root` type, `kind: 'value' \| 'goal'`). Each Root nests its own journey timeline (linked journal entries + events), **Rings** (dated milestones), **Branches** (weekly practices; "Grow branches" AI generation is Pro-only), **Fruit** (measurable outcome), and micro-wins. Entries link to Roots via AI suggestions (confirm/dismiss) or manually. | ✅ Live (July 2026, PR #17) |
+| **Living Tree** (`/roots`) | **Roots** = values & goals (one `Root` type, `kind: 'value' \| 'goal'`). Each root nests its own **Trunk** — the journey timeline of linked journal entries + events like milestones and weekly wins — plus **Rings** (dated milestones), **Branches** (weekly practices; "Grow branches" AI generation is Pro-only), and **Fruit** (measurable proof of progress). Entries link to roots via AI suggestions (confirm/dismiss) or manually. | ✅ Live (July 2026, PR #17) |
 | **Settings** | 12 analytical-framework toggles. Data export + account deletion. | ⚠️ Framework toggles live; export/delete not built |
 | **Yggi Chat** | Floating RAG companion over journal history. | 🔲 Backend `yggiChat` function exists; **no frontend caller yet** |
 | **Hidden Connections** | Signature feature (see below). | 🔲 Backend exists (KNN only); no UI, Cirq is stubbed |
@@ -68,12 +76,12 @@ Two tiers: **Free** and **Pro**. Pro is any active paid `billingPeriod` (monthly
 |---|---|---|
 | Journal entries + AI extraction | ✅ | ✅ |
 | Entry insights | 5 analyzed entries, then gated | Unlimited |
-| Living Tree roots (each with its own journey) | 5 active | Unlimited |
+| Living Tree roots (values & goals, each with a trunk) | 5 active | Unlimited |
 | "Grow branches" AI action generation | ❌ | ✅ |
 | Knowledge graph | Basic | Full |
 | Yggi, Hidden Connections, weekly digest, data export | ❌ (planned) | ✅ (planned) |
 
-Pricing: **$4.99/mo · $44.99/yr · $149 lifetime**. Two gates are enforced in code today: the **insight gate** (5 analyzed entries) in `functions/src/gemini/analyzeEntry.ts` (`FREE_INSIGHT_LIMIT` + the `insightGated` flag), and the **roots cap** (5 active) in `functions/src/roots/onRootWrite.ts` (`FREE_ROOTS_LIMIT` + a server-set `gated` flag Firestore rules stop clients clearing). "Grow branches" is Pro-gated both in the UI (`FeatureGate`) and server-side in `generateBranchActions`. Journeys have **no separate cap** — they're nested inside Roots.
+Pricing: **$4.99/mo · $44.99/yr · $149 lifetime**. Two gates are enforced in code today: the **insight gate** (5 analyzed entries) in `functions/src/gemini/analyzeEntry.ts` (`FREE_INSIGHT_LIMIT` + the `insightGated` flag), and the **roots cap** (5 active) in `functions/src/roots/onRootWrite.ts` (`FREE_ROOTS_LIMIT` + a server-set `gated` flag Firestore rules stop clients clearing). "Grow branches" is Pro-gated both in the UI (`FeatureGate`) and server-side in `generateBranchActions`. The trunk has **no separate cap** — it's nested inside its root.
 
 ### Hidden Connections — the signature feature (aspirational)
 
@@ -97,7 +105,7 @@ The intended pipeline: on save, Gemini embeds the entry → a batch runs **Googl
 | Graph visualisation | D3.js | v7 |
 | Payments | Stripe | ^22 (functions) |
 | Analytics | Firebase Analytics (client) + GA4 Measurement Protocol (server) | — |
-| Hosting | Cloud Run (containerised Next.js), GitHub Actions deploy | — |
+| Hosting | Cloud Run (containerised Next.js), Cloud Build deploy | — |
 
 **Rule:** if a Google Cloud product covers the use case, use it. Don't introduce third-party alternatives for what Firebase/GCP already handles.
 
@@ -188,7 +196,7 @@ yggdrasil/
 │   │   ├── layout.tsx                # redirects to /login if no user; wraps SubscriptionProvider
 │   │   ├── journal/                  # composer + entry detail ([entryId])
 │   │   ├── entries/                  # list + search
-│   │   ├── roots/                    # Living Tree page (roots + journeys + branches)
+│   │   ├── roots/                    # Living Tree page (roots + trunks + branches)
 │   │   ├── insights/                 # insights dashboard
 │   │   ├── settings/                 # framework toggles + billing
 │   │   └── pricing/                  # plan selection / checkout entry
@@ -259,7 +267,7 @@ yggdrasil/
 ├── scripts/set-admin-claim.mjs       # grant/revoke the admin custom claim
 ├── docs/                             # specs, this guide, analysis schema, brand
 ├── Dockerfile, firebase.json, firestore.rules, firestore.indexes.json, storage.rules
-└── .github/workflows/                # ci.yml (PR checks), deploy.yml (Cloud Run)
+└── .github/workflows/                # ci.yml (PR checks); Cloud Run deploys via Cloud Build, not Actions
 ```
 
 ### Path alias
@@ -319,9 +327,15 @@ Read models from env/constants — **never hardcode a model string**.
 | Pro | `gemini-3.5-pro` — only with a documented reason (costs more) |
 | Embeddings | `gemini-embedding-001`, truncated to **768 dims** (MRL) to match the Firestore vector index |
 
-> ⚠️ **Known drift:** `deploy.yml` still injects `GEMINI_MODEL_DEFAULT=gemini-2.0-flash` for the Next.js service, which overrides the code default in production. The functions runtime uses the 3.5 default. If you touch model config, confirm the intended prod model with Isa rather than assuming.
+> The GitHub Actions `deploy.yml` workflow — which injected a stale 2.0-era `GEMINI_MODEL_DEFAULT` override — was removed as dead config in July 2026 (PR #24); deploys run via Cloud Build triggers, and prod env/secrets live in GCP. The functions code default is `gemini-3.5-flash`.
+>
+> ⚠️ **Residual drift (July 2026):** `.env.production.example` still templates `GEMINI_MODEL_DEFAULT` at the old 2.0-era value, and a few call sites hardcode a 2.0-era fallback (`lib/gemini/client.ts`, `functions/src/yggi/chat.ts`, `app/api/reflect/route.ts`). If you touch model config, confirm the intended prod model with Isa rather than assuming.
 
 ### Subscriptions & feature gating
+
+> **⚠️ Pending architecture change (FIX workstream):** `subscriptions/{userId}` becomes the sole subscription source of truth; `tier`/`plan` leave the user doc; `entryCount` is replaced by Firestore `count()` aggregation; Stripe customers carry `metadata.firebaseUID` as the canonical join key; webhook idempotency via `stripeEvents/{eventId}`. **Do not build new features against `tier`/`entryCount` on the user doc.** Spec: `docs/tasks/fix-user-data-integrity.md` (ask Isa if the file is not yet committed).
+
+The description below is the **current** code, kept accurate until the FIX workstream lands:
 
 - Subscription state lives at `subscriptions/{uid}`, **written only by the Stripe webhook** (`functions/src/stripe/stripeWebhook.ts`), read client-side via `SubscriptionContext` → `useSubscription()`.
 - Gate Pro-only UI with `<FeatureGate>` (`components/billing/`). `entitlement === 'PRO'` means active paid access.
@@ -365,7 +379,7 @@ import { logEntryCreated, logYggiChatOpened } from '@/lib/analytics/client';
 logEntryCreated({ entry_type, has_mood, tag_count, word_count });
 ```
 
-The full event catalogue (names + required props) lives in §6 of [`docs/yggdrasil-product-spec-v4.md`](yggdrasil-product-spec-v4.md). **Reality check:** Living Tree events now fire (`goal_created`, `goal_completed`, `branch_actions_generated`, `root_entry_linked`, `branch_completed`, `branch_week_reset`, `living_tree_viewed`, …), but events for still-unbuilt features (onboarding, Yggi) are defined and idle. If your task builds one of those features, wire its events as part of the task.
+The full event catalogue (names + required props) lives in §6 of [`docs/yggdrasil-product-spec-v4.md`](yggdrasil-product-spec-v4.md). **Reality check:** Living Tree events now fire (`goal_created`, `goal_completed`, `branch_actions_generated`, `root_entry_linked`, `branch_completed`, `branch_week_reset`, `living_tree_viewed`, …), but events for still-unbuilt features (Yggi chat, Hidden Connections UI, data export) are defined and idle. If your task builds one of those features, wire its events as part of the task.
 
 ---
 
@@ -407,7 +421,7 @@ Rules summary: users read/write only their own `users/{uid}/**` (minus the prote
 - `types/journal.ts` — `JournalEntry`, `EntryAnalysis` (6 top-level fields + nested `interpretation` with 7 sub-fields; framework/depth fields gated by `depthScore >= 3`), `EntryType`, `Mood`.
 - `types/subscription.ts` — `SubscriptionTier` (`'FREE' | 'PRO'`), `SubscriptionStatus`, `BillingPeriod` (`'monthly' | 'yearly' | 'lifetime'`).
 - `types/user.ts` — `UserProfile` (`tier`, `entitlement`, `billingPeriod`, `streakDays`, …).
-- `types/goals.ts` — `Root` (+ `BranchAction`, `Ring`, `RootFruit`), `JourneyEvent`, `RootLinkSuggestion`, `Achievement`. (The old standalone `Goal`/`Journey` types are gone — journeys are nested inside Roots.)
+- `types/goals.ts` — `Root` (+ `BranchAction`, `Ring`, `RootFruit`), `JourneyEvent`, `RootLinkSuggestion`, `Achievement`. (The old standalone `Goal`/`Journey` types are gone — the trunk timeline is nested inside its root; `JourneyEvent` remains the code name for trunk events.)
 - `types/insights.ts` — connection/cluster/report shapes.
 
 ---
@@ -568,7 +582,7 @@ The visual identity is established. **Do not redesign anything** — match the e
 
 **Only Isa deploys.** Don't deploy Cloud Run, deploy Cloud Functions, or push to the Firebase project unless explicitly asked.
 
-Pipeline: PR merged to `main` → GitHub Actions (`deploy.yml`) builds the Docker image and deploys to Cloud Run with secrets from **GCP Secret Manager**; Cloud Functions deploy via `firebase deploy --only functions`. Production secrets (`FIREBASE_ADMIN_PRIVATE_KEY`, `GEMINI_API_KEY`, Stripe keys, `GA4_API_SECRET`) live in Secret Manager, never in a committed file. **When you add a new secret or env var, call it out in your PR** so Isa adds it before deploying.
+Pipeline: merge to `main` → a **Cloud Build trigger** builds the Docker image and deploys to Cloud Run with secrets from **GCP Secret Manager** (the old GitHub Actions `deploy.yml` was removed in July 2026); Cloud Functions deploy via `firebase deploy --only functions`. Production secrets (`FIREBASE_ADMIN_PRIVATE_KEY`, `GEMINI_API_KEY`, Stripe keys, `GA4_API_SECRET`) live in Secret Manager, never in a committed file. **When you add a new secret or env var, call it out in your PR** so Isa adds it before deploying.
 
 If you want to be involved in the deployment side, tell Isa.
 
