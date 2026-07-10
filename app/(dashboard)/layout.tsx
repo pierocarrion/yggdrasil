@@ -7,6 +7,8 @@ import { SubscriptionProvider } from '@/context/SubscriptionContext';
 import { useAuth } from '@/hooks/useAuth';
 import { FamiliarPatternToast } from '@/components/insights/FamiliarPatternToast';
 import { Logo } from '@/components/marketing/Logo';
+import { YggiFab } from '@/components/yggi/YggiFab';
+import { YggiDrawer } from '@/components/yggi/YggiDrawer';
 
 export default function DashboardLayout({
   children,
@@ -17,6 +19,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [signingOut, setSigningOut] = useState(false);
+  const [isYggiOpen, setIsYggiOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -223,6 +226,8 @@ export default function DashboardLayout({
           </nav>
         </div>
         <FamiliarPatternToast />
+        <YggiFab onClick={() => setIsYggiOpen(!isYggiOpen)} isOpen={isYggiOpen} />
+        <YggiDrawer isOpen={isYggiOpen} onClose={() => setIsYggiOpen(false)} />
       </div>
     </SubscriptionProvider>
   );
