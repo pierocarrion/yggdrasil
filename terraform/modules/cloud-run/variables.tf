@@ -64,10 +64,20 @@ variable "env_vars" {
 }
 
 variable "secret_volumes" {
-  description = "Secret Manager volume mounts"
+  description = "Secret Manager volume mounts (deprecated — prefer secret_env_vars)"
   type        = list(object({
     secret_name = string
     mount_path  = string
+  }))
+  default = []
+}
+
+variable "secret_env_vars" {
+  description = "Secrets injected as environment variables (read by the app via process.env.<env_name>)"
+  type = list(object({
+    env_name    = string
+    secret_name = string
+    version     = string
   }))
   default = []
 }

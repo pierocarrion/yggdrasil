@@ -5,34 +5,12 @@ resource "google_cloud_run_v2_service" "default" {
   labels   = var.labels
 
   template {
-    service_account = var.service_account_email
+    service_account                = var.service_account_email
     max_instance_request_concurrency = 80
 
     scaling {
       min_instance_count = var.min_instances
       max_instance_count = var.max_instances
-    }
-
-    volumes {
-      name = "secrets"
-      secret {
-        secret = "stripe-secret-key"
-        items {
-          version = "latest"
-          path    = "stripe-secret-key"
-        }
-      }
-    }
-
-    volumes {
-      name = "vertex-secrets"
-      secret {
-        secret = "vertex-ai-api-key"
-        items {
-          version = "latest"
-          path    = "vertex-ai-api-key"
-        }
-      }
     }
 
     containers {
@@ -59,6 +37,7 @@ resource "google_cloud_run_v2_service" "default" {
         value = tostring(var.port)
       }
 
+      # Plain (non-secret) environment variables
       dynamic "env" {
         for_each = var.env_vars
         content {
@@ -67,14 +46,18 @@ resource "google_cloud_run_v2_service" "default" {
         }
       }
 
-      volume_mounts {
-        name       = "secrets"
-        mount_path = "/secrets/stripe"
-      }
-
-      volume_mounts {
-        name       = "vertex-secrets"
-        mount_path = "/secrets/vertex"
+      # Secrets injected as environment variables (matches process.env.* usage in the app)
+      dynamic "env" {
+        for_each = var.secret_env_vars
+        content {
+          name = env.value.env_name
+          value_from {
+            secret_key_ref {
+              secret = env.value.secret_name
+              version = env.value.version
+            }
+          }
+        }
       }
 
       startup_probe {
@@ -101,10 +84,10 @@ resource "google_cloud_run_v2_service" "default" {
     }
 
     annotations = {
-      "run.googleapis.com/ingress"           = "all"
+      "run.googleapis.com/ingress"               = "all"
       "run.googleapis.com/execution-environment" = "gen2"
-      "run.googleapis.com/cpu-throttling"    = "false"
-      "run.googleapis.com/startup-cpu-boost" = "true"
+      "run.googleapis.com/cpu-throttling"        = "false"
+      "run.googleapis.com/startup-cpu-boost"     = "true"
     }
   }
 
