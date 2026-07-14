@@ -1,11 +1,11 @@
 resource "google_kms_key_ring" "attestor" {
-  name     = "attestor-keyring"
+  name     = var.kms_keyring_id
   location = "global"
   project  = var.project_id
 }
 
 resource "google_kms_crypto_key" "attestor" {
-  name     = "attestor-key"
+  name     = var.kms_key_id
   key_ring = google_kms_key_ring.attestor.id
   purpose  = "ASYMMETRIC_SIGNING"
 
@@ -26,6 +26,20 @@ resource "google_container_analysis_note" "attestor" {
   }
 }
 
+# Current KMS key version (created implicitly with the crypto key)
+data "google_kms_crypto_key_version" "current" {
+  crypto_key = google_kms_crypto_key.attestor.id
+}
+
+# Fetch the public key PEM via gcloud (requires an authenticated gcloud at plan/apply time).
+# This is the documented pattern for wiring KMS-backed keys into a Binary Authorization attestor.
+data "external" "kms_public_key" {
+  program = [
+    "sh", "-c",
+    "gcloud kms keys get-public-key ${google_kms_crypto_key.attestor.id} --version=${data.google_kms_crypto_key_version.current.name} --location=global | jq -R '{pem: .}'",
+  ]
+}
+
 resource "google_binary_authorization_attestor" "default" {
   name    = var.attestor_name
   project = var.project_id
@@ -34,23 +48,13 @@ resource "google_binary_authorization_attestor" "default" {
     note_reference = google_container_analysis_note.attestor.name
 
     public_keys {
-      id = "kms-key"
+      id = "kms-ecdsa-p256"
       pkix_public_key {
-        public_key_pem     = google_kms_crypto_key_attestor_version.attestor_key.public_key_pem
+        public_key_pem      = data.external.kms_public_key.result.pem
         signature_algorithm = "ECDSA_P256_SHA256"
       }
     }
   }
-}
-
-data "google_kms_crypto_key_version" "attestor_key" {
-  crypto_key = google_kms_crypto_key.attestor.id
-}
-
-resource "google_kms_crypto_key_attestor_version" "attestor_key" {
-  crypto_key         = google_kms_crypto_key.attestor.id
-  attestor           = google_binary_authorization_attestor.default.name
-  crypto_key_version = data.google_kms_crypto_key_version.attestor_key.version
 }
 
 resource "google_binary_authorization_policy" "default" {
@@ -64,10 +68,10 @@ resource "google_binary_authorization_policy" "default" {
   }
 
   default_admission_rule {
-    enforcement_mode   = var.enforcement_mode
-    evaluation_mode    = "REQUIRE_ATTESTATION"
+    evaluation_mode        = "REQUIRE_ATTESTATION"
+    enforcement_mode       = var.enforcement_mode
     require_attestations_by = [
-      google_binary_authorization_attestor.default.name
+      google_binary_authorization_attestor.default.name,
     ]
   }
 }
@@ -78,4 +82,8 @@ output "attestor_name" {
 
 output "policy_id" {
   value = google_binary_authorization_policy.default.id
+}
+
+output "kms_key_id" {
+  value = google_kms_crypto_key.attestor.id
 }

@@ -26,15 +26,15 @@ variable "kms_key_id" {
 }
 
 variable "enforcement_mode" {
-  description = "Enforcement mode (ENFORCED_BLOCK_AND_AUDIT_LOG or DRY_RUN_AUDIT_LOG_ONLY)"
+  description = "Enforcement mode. Start with DRY_RUN_AUDIT_LOG_ONLY and switch to ENFORCED_BLOCK_AND_AUDIT_LOG once the first signed release is validated."
   type        = string
-  default     = "ENFORCED_BLOCK_AND_AUDIT_LOG"
+  default     = "DRY_RUN_AUDIT_LOG_ONLY"
 }
 
 variable "allowed_registries" {
   description = "List of allowed registry patterns"
   type        = list(string)
-  default     = [
-    "us-docker.pkg.dev/yggdrasil-shared/docker/*",
+  default = [
+    "us-docker.pkg.dev/yggdrasil-prod/docker/*",
   ]
 }
