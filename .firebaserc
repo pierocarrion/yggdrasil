@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "yggdrasil-497923"
+    "default": "yggdrasil-dev",
+    "dev": "yggdrasil-dev",
+    "prod": "yggdrasil-prod"
   }
 }
