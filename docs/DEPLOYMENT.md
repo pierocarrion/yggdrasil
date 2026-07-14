@@ -1,22 +1,23 @@
 # Yggdrasil GCP Deployment Guide
 
+> **Authoritative reference:** [ARCHITECTURE.md](ARCHITECTURE.md) reflects the current 2-project
+> model (`yggdrasil-dev` + `yggdrasil-prod`, no separate `shared` project — CI services live in prod).
+> This guide is kept for historical context; defer to ARCHITECTURE.md where they differ.
+
 ## Architecture Overview
 
 ```
-GitHub Actions (OIDC) → Cloud Build → Artifact Registry → Cloud Deploy → Cloud Run
-                                        ↓
-                                   Cloud KMS (signing)
-                                        ↓
-                                   Binary Authz (attestation)
+GitHub Actions (OIDC) → Cloud Build → Artifact Registry → Cloud Run (dev | prod)
+                              ↓
+                         Cloud KMS (signing) → Binary Authorization (DRYRUN)
 ```
 
 ## GCP Projects
 
-| Project | Purpose | Domain |
-|---------|---------|--------|
-| `yggdrasil-dev` | Development | `dev.yggdrasil.app` |
-| `yggdrasil-prod` | Production | `yggdrasil.app` |
-| `yggdrasil-shared` | Shared services | — |
+| Project | Purpose |
+|---------|---------|
+| `yggdrasil-dev` | Development (Cloud Run, Functions, Firestore, Storage, Secrets) |
+| `yggdrasil-prod` | Production (same app services) + CI control plane (Artifact Registry, Cloud Build, Cloud Deploy, KMS, Binary Authz, WIF, Terraform state) |
 
 ## Prerequisites
 
@@ -37,13 +38,11 @@ gcloud auth application-default login
 ### 2. Create GCP Projects
 
 ```bash
-# Create projects (if not using Terraform for project creation)
-gcloud projects create yggdrasil-shared --name="Yggdrasil Shared"
+# Create projects (if not using the console)
 gcloud projects create yggdrasil-dev --name="Yggdrasil Dev"
 gcloud projects create yggdrasil-prod --name="Yggdrasil Prod"
 
 # Link billing account
-gcloud billing projects link yggdrasil-shared --billing-account=YOUR_BILLING_ACCOUNT_ID
 gcloud billing projects link yggdrasil-dev --billing-account=YOUR_BILLING_ACCOUNT_ID
 gcloud billing projects link yggdrasil-prod --billing-account=YOUR_BILLING_ACCOUNT_ID
 ```
@@ -64,8 +63,8 @@ Go to GitHub repo → Settings → Secrets and variables → Actions → New rep
 | Secret | Value |
 |--------|-------|
 | `WIF_PROVIDER` | `projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider` |
-| `GITHUB_DEPLOYER_SA` | `github-deployer@yggdrasil-shared.iam.gserviceaccount.com` |
-| `TERRAFORM_SA` | `github-deployer@yggdrasil-shared.iam.gserviceaccount.com` |
+| `GITHUB_DEPLOYER_SA` | `github-deployer@yggdrasil-prod.iam.gserviceaccount.com` |
+| `TERRAFORM_SA` | `github-deployer@yggdrasil-prod.iam.gserviceaccount.com` |
 | `SLACK_WEBHOOK` | Slack incoming webhook URL (optional) |
 
 ### 5. Create GitHub Environments
