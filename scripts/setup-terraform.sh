@@ -2,85 +2,61 @@
 set -euo pipefail
 
 # =============================================================================
-# Terraform Setup Script
+# Yggdrasil Terraform bootstrap
 # =============================================================================
-# This script initializes the Terraform state bucket and runs initial apply
+# Creates the Terraform state bucket + applies the control-plane layer (terraform/shared)
+# which lives in the yggdrasil-prod project (Artifact Registry, Cloud Build, KMS,
+# Binary Authorization, Workload Identity Federation, CI service accounts).
 # =============================================================================
 
-PROJECT_ID="yggdrasil-shared"
 REGION="us-central1"
-STATE_BUCKET="yggdrasil-shared-tf-state"
+PROD_PROJECT="yggdrasil-prod"
+STATE_BUCKET="yggdrasil-prod-tf-state"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "============================================="
-echo "  Yggdrasil Terraform Setup"
+echo "  Yggdrasil Terraform bootstrap"
+echo "  Control-plane project: ${PROD_PROJECT}"
 echo "============================================="
 
-# Check if authenticated
 if ! gcloud auth list --filter="status:ACTIVE" --format="value(account)" | grep -q .; then
-  echo "ERROR: Not authenticated to Google Cloud"
-  echo "Run: gcloud auth login"
+  echo "ERROR: Not authenticated to Google Cloud — run: gcloud auth login && gcloud auth application-default login"
   exit 1
 fi
 
 # Create state bucket if it doesn't exist
-echo "Checking if state bucket exists..."
-if ! gsutil ls -b "gs://${STATE_BUCKET}" > /dev/null 2>&1; then
+echo "Checking state bucket..."
+if ! gsutil ls -b "gs://${STATE_BUCKET}" >/dev/null 2>&1; then
   echo "Creating state bucket: ${STATE_BUCKET}"
-  gsutil mb -p "${PROJECT_ID}" -l "${REGION}" -b on "gs://${STATE_BUCKET}"
+  gsutil mb -p "${PROD_PROJECT}" -l "${REGION}" -b on "gs://${STATE_BUCKET}"
   gsutil versioning set on "gs://${STATE_BUCKET}"
-  echo "State bucket created!"
 else
   echo "State bucket already exists."
 fi
 
-# Enable required APIs
-echo "Enabling required APIs..."
-gcloud services enable \
-  artifactregistry.googleapis.com \
-  cloudbuild.googleapis.com \
-  clouddeploy.googleapis.com \
-  cloudfunctions.googleapis.com \
-  run.googleapis.com \
-  firestore.googleapis.com \
-  storage.googleapis.com \
-  secretmanager.googleapis.com \
-  binaryauthorization.googleapis.com \
-  containeranalysis.googleapis.com \
-  monitoring.googleapis.com \
-  logging.googleapis.com \
-  cloudkms.googleapis.com \
-  iam.googleapis.com \
-  sts.googleapis.com \
-  cloudresourcemanager.googleapis.com \
-  --project="${PROJECT_ID}"
-
-# Apply shared infrastructure
-echo "Applying shared infrastructure..."
-cd "$(dirname "$0")/../terraform/shared"
+# Apply control-plane (shared) layer
+echo "Applying control-plane infrastructure (terraform/shared)..."
+cd "${SCRIPT_DIR}/../terraform/shared"
 terraform init
 terraform apply -auto-approve
 
-# Get outputs
-echo "Getting shared infrastructure outputs..."
-WORKLOAD_IDENTITY_POOL=$(terraform output -raw workload_identity_pool 2>/dev/null || echo "")
-WORKLOAD_IDENTITY_PROVIDER=$(terraform output -raw workload_identity_provider 2>/dev/null || echo "")
-SERVICE_ACCOUNT_EMAILS=$(terraform output -json service_account_emails 2>/dev/null || echo "{}")
+WIF_PROVIDER=$(terraform output -raw wif_provider_full 2>/dev/null || echo "")
+DEPLOYER_SA=$(terraform output -json service_account_emails 2>/dev/null | jq -r '.["github-deployer"]' 2>/dev/null || echo "")
 
-echo "============================================="
-echo "  Shared Infrastructure Applied!"
-echo ""
-echo "  Workload Identity Pool: ${WORKLOAD_IDENTITY_POOL}"
-echo "  Workload Identity Provider: ${WORKLOAD_IDENTITY_PROVIDER}"
-echo ""
-echo "  Next steps:"
-echo "  1. Create GitHub secrets:"
-echo "     - WIF_PROVIDER: ${WORKLOAD_IDENTITY_PROVIDER}"
-echo "     - GITHUB_DEPLOYER_SA: ${SERVICE_ACCOUNT_EMAILS}"
-echo "     - TERRAFORM_SA: ${SERVICE_ACCOUNT_EMAILS}"
-echo ""
-echo "  2. Apply dev infrastructure:"
-echo "     cd terraform/environments/dev && terraform apply"
-echo ""
-echo "  3. Apply prod infrastructure:"
-echo "     cd terraform/environments/prod && terraform apply"
-echo "============================================="
+cat <<EOF
+
+=============================================
+  Control plane applied!
+
+  GitHub secrets to set (Settings → Secrets → Actions):
+    WIF_PROVIDER       = ${WIF_PROVIDER}
+    GITHUB_DEPLOYER_SA = ${DEPLOYER_SA}
+    TERRAFORM_SA       = ${DEPLOYER_SA}
+
+  Next steps:
+    1. Apply dev environment:    cd terraform/environments/dev  && terraform init && terraform apply
+    2. Apply prod environment:   cd terraform/environments/prod && terraform init && terraform apply
+    3. Load runtime secrets into Secret Manager (see docs/ARCHITECTURE.md §5/§8.6)
+    4. Create the two Firebase projects (see docs/ARCHITECTURE.md §8.4)
+=============================================
+EOF
