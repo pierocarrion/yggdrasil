@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { VertexAI } from '@google-cloud/vertexai';
 
 const PROJECT = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCP_PROJECT || 'yggdrasil-yggi';
@@ -34,9 +35,7 @@ interface VertexAIGenerativeResponse {
   };
 }
 
-function wrapModel(inner: {
-  generateContent: (req: unknown) => Promise<unknown>;
-}): VertexAIGenerativeModel {
+function wrapModel(inner: any): VertexAIGenerativeModel {
   return {
     async generateContent(request, options) {
       const timer = options?.timeout ? setTimeout(() => { /* signal via thrown error */ }, options.timeout) : undefined;
