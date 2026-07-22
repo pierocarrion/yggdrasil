@@ -111,12 +111,15 @@ export async function generateJSON<T>(
 }
 
 export async function generateEmbedding(text: string): Promise<number[]> {
-  const inner = vertexAI.getGenerativeModel({
+  const inner: any = vertexAI.getGenerativeModel({
     model: process.env.GEMINI_MODEL_EMBEDDING || 'gemini-embedding-001',
   });
-  const resp = await inner.embedContent({
+  const resp: any = await inner.embedContent({
     contents: [{ role: 'user', parts: [{ text }] }],
   });
-  const values = (resp as { embedding?: { values?: number[] } }).embedding?.values ?? [];
+  const values: number[] =
+    resp?.embedding?.values ??
+    resp?.embeddings?.[0]?.values ??
+    [];
   return values.slice(0, 768);
 }

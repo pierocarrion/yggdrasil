@@ -6,22 +6,22 @@ import { getStorage } from 'firebase/storage';
 import { getAnalytics, isSupported } from 'firebase/analytics';
 import type { Analytics } from 'firebase/analytics';
 
-// Public Firebase *web app* config for yggdrasil-497923. These values are not
-// secrets: they ship verbatim in every client bundle and access is enforced by
-// Firebase security rules, not by hiding the config (see the note in
-// .env.production.example — "safe to commit"). Committed defaults keep
+// Public Firebase *web app* config for the yggdrasil-yggi project. These values
+// are not secrets: they ship verbatim in every client bundle and access is
+// enforced by Firebase security rules, not by hiding the config (see the note
+// in .env.production.example — "safe to commit"). Committed defaults keep
 // clean-checkout builds working: Cloud Build / App Hosting / CI have no
 // .env.production, and Next.js prerenders client components at build time, so
 // a missing apiKey used to crash `next build` with auth/invalid-api-key.
 // NEXT_PUBLIC_ env vars still take precedence when present.
 const publicDefaults = {
-  apiKey: 'AIzaSyBURyw8WUWgdtdXIecSoWB31I9LQLMIRIM',
-  authDomain: 'yggdrasil-497923.firebaseapp.com',
-  projectId: 'yggdrasil-497923',
-  storageBucket: 'yggdrasil-497923.firebasestorage.app',
-  messagingSenderId: '168739896450',
-  appId: '1:168739896450:web:d4df0d16873ceb8b7b489b',
-  measurementId: 'G-GZZD2WH17Y',
+  apiKey: 'AIzaSyAN8Cvv3FGFQInZvXitSqUlj2S65vfQKLc',
+  authDomain: 'yggdrasil-yggi.firebaseapp.com',
+  projectId: 'yggdrasil-yggi',
+  storageBucket: 'yggdrasil-yggi.firebasestorage.app',
+  messagingSenderId: '444640420779',
+  appId: '1:444640420779:web:29881c2d1971f0bfbc68ee',
+  measurementId: '',
 };
 
 const firebaseConfig = {
