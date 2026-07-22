@@ -1,14 +1,19 @@
 name: Build & Deploy (Cloud Build)
 
-# Thin trigger: authenticates to GCP via Workload Identity Federation and submits
-# cloudbuild.yaml to Cloud Build. All build/sign/deploy logic lives in cloudbuild.yaml.
+# Thin trigger — authenticates to GCP via Workload Identity Federation and
+# submits cloudbuild.yaml to Cloud Build. All build/sign/deploy logic lives
+# in cloudbuild.yaml.
+#
+# Branch → environment mapping (per project decision):
+#   push main      → dev  (yggdrasil-web-dev service)
+#   any other push → skip the deploy (CI only runs)
+#   workflow_dispatch → choose dev / prod on the manual trigger
 on:
   push:
-    branches: [develop, main]
+    branches: [main]
     paths-ignore:
       - '**.md'
       - 'docs/**'
-      - 'terraform/**'
       - '.github/workflows/terraform.yml'
   workflow_dispatch:
     inputs:
@@ -25,13 +30,13 @@ permissions:
 
 env:
   REGION: 'us-central1'
-  PROJECT_ID: 'yggdrasil-prod'   # Cloud Build + Artifact Registry live here
+  PROJECT_ID: 'yggdrasil-yggi'
 
 jobs:
   trigger:
     name: Trigger Cloud Build
     runs-on: ubuntu-latest
-    environment: ${{ (github.event_name == 'workflow_dispatch' && inputs.env) || (github.ref == 'refs/heads/main' && 'production') || 'dev' }}
+    environment: ${{ github.event_name == 'workflow_dispatch' && 'production' || 'dev' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -40,8 +45,6 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             ENV="${{ inputs.env }}"
-          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            ENV="prod"
           else
             ENV="dev"
           fi

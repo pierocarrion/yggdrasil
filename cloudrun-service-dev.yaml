@@ -1,0 +1,93 @@
+# Cloud Run service manifest — dev variant.
+# Rendered by Cloud Build from cloudrun-service.yaml.tmpl (see cloudbuild.yaml)
+# via sed substitution of `__SERVICE__` and `__IMAGE__`.
+#
+# Public Firebase client config (NEXT_PUBLIC_*) is baked at Docker build time
+# — not here. See .env.production baked into the image.
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: yggdrasil-web-dev
+  annotations:
+    run.googleapis.com/ingress: all
+    run.googleapis.com/execution-environment: gen2
+    run.googleapis.com/startup-cpu-boost: "true"
+spec:
+  template:
+    metadata:
+      annotations:
+        run.googleapis.com/cpu-throttling: "false"
+        run.googleapis.com/startup-cpu-boost: "true"
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "10"
+    spec:
+      serviceAccountName: yggdrasil-web-dev@yggdrasil-yggi.iam.gserviceaccount.com
+      containers:
+        - name: web
+          image: __IMAGE__
+          ports:
+            - containerPort: 8080
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "8080"
+            - name: FIREBASE_ADMIN_PROJECT_ID
+              value: yggdrasil-yggi
+            - name: APP_ENV
+              value: dev
+            # Secrets injected as env vars from Secret Manager
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: latest
+                  name: gemini-api-key
+            - name: FIREBASE_ADMIN_CLIENT_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  key: latest
+                  name: firebase-admin-client-email
+            - name: FIREBASE_ADMIN_PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: latest
+                  name: firebase-admin-private-key
+            - name: GA4_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  key: latest
+                  name: ga4-api-secret
+            - name: STRIPE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: latest
+                  name: stripe-secret-key
+            - name: STRIPE_PUBLISHABLE_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: latest
+                  name: stripe-publishable-key
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 60
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            limits:
+              cpu: "1000m"
+              memory: 1Gi
+  traffic:
+    - revisionName: ""
+      percent: 100
+      latestRevision: true

@@ -1,51 +1,39 @@
-# Cloud Build pipeline — source of truth for build / sign / deploy.
-# Triggered by GitHub Actions (.github/workflows/deploy.yml) via WIF:
-#   gcloud builds submit --config=cloudbuild.yaml --project=yggdrasil-prod \
+# Cloud Build pipeline for the yggdrasil web app.
+#
+# Triggered by .github/workflows/deploy.yml via WIF:
+#   gcloud builds submit --config=cloudbuild.yaml --project=yggdrasil-yggi \
 #     --substitutions=_ENV=dev,_SHORT_SHA=<sha>
 #
-# Builds an environment-specific image (public Firebase config baked from .env.production),
-# signs it, then deploys directly to the target project's Cloud Run via the rendered manifest.
-#   _ENV=dev  -> yggdrasil-dev   (auto on push to develop)
-#   _ENV=prod -> yggdrasil-prod  (on push to main / manual)
-
+# Same GCP project for both envs. _ENV selects:
+#   * which Cloud Run service to deploy (yggdrasil-web-dev or yggdrasil-web-prod)
+#   * which manifest template to render
+#   * which image tag to use
+#
+# Identity signing + Binary Authorization are kept in DRYRUN to avoid blocking
+# failed-attestation deploys during development.
 steps:
-  # 1. Resolve the target project for _ENV
-  - id: target
-    name: 'gcr.io/cloud-builders/gcloud'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        case "$_ENV" in
-          dev)  echo "yggdrasil-dev"  > /workspace/target_project ;;
-          prod) echo "yggdrasil-prod" > /workspace/target_project ;;
-          *)    echo "ERROR: _ENV must be 'dev' or 'prod' (got: $_ENV)"; exit 1 ;;
-        esac
-        echo "Target project: $$(cat /workspace/target_project)"
-
-  # 2. Build the container image (env-specific tag). Public Firebase config is baked
-  #     from the committed .env.production (Next.js auto-load). Runtime secrets are
-  #     injected at runtime via Secret Manager (see cloudrun-service.yaml).
+  # 1. Build the container image. Public Firebase config is baked from the
+  #    committed .env.production (Next.js auto-loads it).
   - id: build
     name: 'gcr.io/cloud-builders/docker'
     waitFor: ['-']
     args:
       - 'build'
       - '-t'
-      - '$_AR_HOST/$PROJECT_ID/docker/$_SERVICE:$_ENV-$SHORT_SHA'
+      - '$_AR_HOST/$PROJECT_ID/docker/yggdrasil-web:$_ENV-$SHORT_SHA'
       - '-t'
-      - '$_AR_HOST/$PROJECT_ID/docker/$_SERVICE:$_ENV-latest'
+      - '$_AR_HOST/$PROJECT_ID/docker/yggdrasil-web:$_ENV-latest'
       - '--build-arg'
       - 'NODE_ENV=production'
       - '.'
 
-  # 3. Push all tags to Artifact Registry
+  # 2. Push all tags to Artifact Registry.
   - id: push
     name: 'gcr.io/cloud-builders/docker'
     waitFor: ['build']
-    args: ['push', '--all-tags', '$_AR_HOST/$PROJECT_ID/docker/$_SERVICE']
+    args: ['push', '--all-tags', '$_AR_HOST/$PROJECT_ID/docker/yggdrasil-web']
 
-  # 4. Capture the image digest (gcloud builder) for signing + deploy
+  # 3. Capture image digest (used for cosign + deploy).
   - id: digest
     name: 'gcr.io/cloud-builders/gcloud'
     waitFor: ['push']
@@ -55,12 +43,12 @@ steps:
       - |
         set -euo pipefail
         DIGEST=$$(gcloud artifacts docker images describe \
-          "$_AR_HOST/$PROJECT_ID/docker/$_SERVICE:$_ENV-$SHORT_SHA" \
+          "$_AR_HOST/$PROJECT_ID/docker/yggdrasil-web:$_ENV-$SHORT_SHA" \
           --format='value(image_summary.digest)')
-        echo "$_AR_HOST/$PROJECT_ID/docker/$_SERVICE@$$DIGEST" > /workspace/image_ref
+        echo "$_AR_HOST/$PROJECT_ID/docker/yggdrasil-web@$$DIGEST" > /workspace/image_ref
         echo "Image ref: $$(cat /workspace/image_ref)"
 
-  # 5. Sign the image with Cosign (Cloud KMS) — best-effort (Binary Authorization is DRYRUN)
+  # 4. Sign image with Cosign (best-effort — Binary Authorization is DRYRUN).
   - id: sign
     name: 'gcr.io/projectsigstore/cosign:v2'
     waitFor: ['digest']
@@ -72,11 +60,11 @@ steps:
         cosign sign --yes \
           --key "kms://projects/$PROJECT_ID/locations/global/keyRings/attestor-keyring/cryptoKeys/attestor-key" \
           "$$(cat /workspace/image_ref)" \
-          || echo "WARNING: cosign signing failed — continuing (policy is DRYRUN)."
+          || echo "WARNING: cosign signing failed (Binary Authz is DRYRUN, deploy continues)."
     env:
       - 'COSIGN_YES=true'
 
-  # 6. Render the Cloud Run manifest and deploy to the target project
+  # 5. Render env-specific Cloud Run manifest and deploy.
   - id: deploy
     name: 'gcr.io/cloud-builders/gcloud'
     waitFor: ['sign']
@@ -85,18 +73,20 @@ steps:
       - '-c'
       - |
         set -euo pipefail
-        TARGET_PROJECT=$$(cat /workspace/target_project)
         IMAGE_REF=$$(cat /workspace/image_ref)
-        echo "Rendering manifest for $TARGET_PROJECT with image $$IMAGE_REF"
-        sed -e "s|__PROJECT_ID__|$$TARGET_PROJECT|g" \
-            -e "s|__IMAGE__|$$IMAGE_REF|g" \
-            cloudrun-service.yaml > /workspace/rendered.yaml
+        case "$_ENV" in
+          dev)  MANIFEST=cloudrun-service-dev.yaml  ;;
+          prod) MANIFEST=cloudrun-service-prod.yaml ;;
+          *) echo "ERROR: _ENV must be 'dev' or 'prod' (got: $_ENV)"; exit 1 ;;
+        esac
+        echo "Rendering $$MANIFEST with image $$IMAGE_REF"
+        sed -e "s|__IMAGE__|$$IMAGE_REF|g" "$$MANIFEST" > /workspace/rendered.yaml
         gcloud run services replace /workspace/rendered.yaml \
-          --project=$$TARGET_PROJECT \
+          --project=$PROJECT_ID \
           --region=$_REGION
-        echo "Deployed yggdrasil-web to $$TARGET_PROJECT"
+        echo "Deployed yggdrasil-web-$$_ENV"
 
-  # 7. Smoke test the health endpoint
+  # 6. Smoke test the health endpoint (10 tries × 10s).
   - id: smoke
     name: 'gcr.io/cloud-builders/gcloud'
     waitFor: ['deploy']
@@ -105,11 +95,14 @@ steps:
       - '-c'
       - |
         set -euo pipefail
-        TARGET_PROJECT=$$(cat /workspace/target_project)
-        URL=$$(gcloud run services describe yggdrasil-web \
-          --project=$$TARGET_PROJECT --region=$_REGION --format='value(status.url)')
+        case "$_ENV" in
+          dev)  SERVICE=yggdrasil-web-dev  ;;
+          prod) SERVICE=yggdrasil-web-prod ;;
+        esac
+        URL=$$(gcloud run services describe $$SERVICE \
+          --project=$PROJECT_ID --region=$_REGION --format='value(status.url)')
         echo "Smoke testing $$URL/api/health"
-        for i in $(seq 1 15); do
+        for i in $$(seq 1 15); do
           if curl -sf "$$URL/api/health" | grep -q '"status":"ok"'; then
             echo "Smoke test passed on attempt $$i"
             exit 0
@@ -117,13 +110,12 @@ steps:
           echo "Attempt $$i failed, retrying in 10s..."
           sleep 10
         done
-        echo "ERROR: smoke test failed for $$TARGET_PROJECT"
+        echo "ERROR: smoke test failed for $$SERVICE"
         exit 1
 
 substitutions:
   _ENV: 'dev'
   _REGION: 'us-central1'
-  _SERVICE: 'yggdrasil-web'
   _AR_HOST: 'us-docker.pkg.dev'
 
 options:
@@ -133,5 +125,5 @@ options:
 timeout: '1800s'
 
 images:
-  - '$_AR_HOST/$PROJECT_ID/docker/$_SERVICE:$_ENV-$SHORT_SHA'
-  - '$_AR_HOST/$PROJECT_ID/docker/$_SERVICE:$_ENV-latest'
+  - '$_AR_HOST/$PROJECT_ID/docker/yggdrasil-web:$_ENV-$SHORT_SHA'
+  - '$_AR_HOST/$PROJECT_ID/docker/yggdrasil-web:$_ENV-latest'

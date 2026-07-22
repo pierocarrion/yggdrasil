@@ -1,7 +1,7 @@
 {
   "projects": {
-    "default": "yggdrasil-dev",
-    "dev": "yggdrasil-dev",
-    "prod": "yggdrasil-prod"
+    "default": "yggdrasil-yggi",
+    "dev": "yggdrasil-yggi",
+    "prod": "yggdrasil-yggi"
   }
 }

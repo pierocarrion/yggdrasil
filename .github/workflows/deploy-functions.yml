@@ -33,7 +33,7 @@ jobs:
   trigger:
     name: Trigger Functions Build
     runs-on: ubuntu-latest
-    environment: ${{ (github.event_name == 'workflow_dispatch' && inputs.env) || (github.ref == 'refs/heads/main' && 'production') || 'dev' }}
+    environment: ${{ (github.event_name == 'workflow_dispatch' && 'production') || 'dev' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -43,9 +43,9 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             ENV="${{ inputs.env }}"
           elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            ENV="prod"
-          else
             ENV="dev"
+          else
+            ENV="prod"
           fi
           echo "env=$ENV" >> "$GITHUB_OUTPUT"
 

@@ -1,12 +1,10 @@
-# Cloud Run service manifest. Rendered by Cloud Build via sed (see cloudbuild.yaml).
-# Placeholders (replaced at deploy time — must NOT use $VAR syntax, which Cloud Build expands):
-#   __PROJECT_ID__  - target GCP project (yggdrasil-dev | yggdrasil-prod)
-#   __IMAGE__       - fully-qualified image reference (…/yggdrasil-web:<tag>@<digest>)
-# Public Firebase client config (NEXT_PUBLIC_*) is baked at Docker build time — not here.
+# Cloud Run service manifest — prod variant.
+# Rendered by Cloud Build from cloudrun-service-prod.yaml.tmpl (see cloudbuild.yaml)
+# via sed substitution of `__IMAGE__`.
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
-  name: yggdrasil-web
+  name: yggdrasil-web-prod
   annotations:
     run.googleapis.com/ingress: all
     run.googleapis.com/execution-environment: gen2
@@ -20,7 +18,7 @@ spec:
         autoscaling.knative.dev/minScale: "1"
         autoscaling.knative.dev/maxScale: "100"
     spec:
-      serviceAccountName: yggdrasil-web@__PROJECT_ID__.iam.gserviceaccount.com
+      serviceAccountName: yggdrasil-web-prod@yggdrasil-yggi.iam.gserviceaccount.com
       containers:
         - name: web
           image: __IMAGE__
@@ -32,8 +30,10 @@ spec:
             - name: PORT
               value: "8080"
             - name: FIREBASE_ADMIN_PROJECT_ID
-              value: __PROJECT_ID__
-            # Secrets injected as env vars (resolved from Secret Manager in each project)
+              value: yggdrasil-yggi
+            - name: APP_ENV
+              value: prod
+            # Secrets injected as env vars from Secret Manager
             - name: GEMINI_API_KEY
               valueFrom:
                 secretKeyRef:
