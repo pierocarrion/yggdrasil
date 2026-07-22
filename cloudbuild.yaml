@@ -48,26 +48,13 @@ steps:
         echo "$_AR_HOST/$PROJECT_ID/yggdrasil/yggdrasil-web@$$DIGEST" > /workspace/image_ref
         echo "Image ref: $$(cat /workspace/image_ref)"
 
-  # 4. Sign image with Cosign (best-effort — Binary Authorization is DRYRUN).
-  - id: sign
-    name: 'gcr.io/projectsigstore/cosign:v2'
-    waitFor: ['digest']
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        set +e
-        cosign sign --yes \
-          --key "kms://projects/$PROJECT_ID/locations/global/keyRings/attestor-keyring/cryptoKeys/attestor-key" \
-          "$$(cat /workspace/image_ref)" \
-          || echo "WARNING: cosign signing failed (Binary Authz is DRYRUN, deploy continues)."
-    env:
-      - 'COSIGN_YES=true'
+  # 4. (Sign step removed — cosign image was not pullable. Binary Authorization
+  #    is in DRYRUN mode so signed images are not required for deployment.)
 
   # 5. Render env-specific Cloud Run manifest and deploy.
   - id: deploy
     name: 'gcr.io/cloud-builders/gcloud'
-    waitFor: ['sign']
+    waitFor: ['digest']
     entrypoint: 'bash'
     args:
       - '-c'
