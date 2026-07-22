@@ -20,7 +20,7 @@ steps:
     args:
       - 'build'
       - '-t'
-      - '$_AR_HOST/$PROJECT_ID/docker/yggdrasil-web:$_ENV-$SHORT_SHA'
+      - '$_AR_HOST/$PROJECT_ID/docker/yggdrasil-web:$_ENV-$_SHORT_SHA'
       - '-t'
       - '$_AR_HOST/$PROJECT_ID/docker/yggdrasil-web:$_ENV-latest'
       - '--build-arg'
@@ -43,7 +43,7 @@ steps:
       - |
         set -euo pipefail
         DIGEST=$$(gcloud artifacts docker images describe \
-          "$_AR_HOST/$PROJECT_ID/docker/yggdrasil-web:$_ENV-$SHORT_SHA" \
+          "$_AR_HOST/$PROJECT_ID/docker/yggdrasil-web:$_ENV-$_SHORT_SHA" \
           --format='value(image_summary.digest)')
         echo "$_AR_HOST/$PROJECT_ID/docker/yggdrasil-web@$$DIGEST" > /workspace/image_ref
         echo "Image ref: $$(cat /workspace/image_ref)"
@@ -125,5 +125,5 @@ options:
 timeout: '1800s'
 
 images:
-  - '$_AR_HOST/$PROJECT_ID/docker/yggdrasil-web:$_ENV-$SHORT_SHA'
+  - '$_AR_HOST/$PROJECT_ID/docker/yggdrasil-web:$_ENV-$_SHORT_SHA'
   - '$_AR_HOST/$PROJECT_ID/docker/yggdrasil-web:$_ENV-latest'
