@@ -1,20 +1,27 @@
-import { VertexAI, type GenerateContentResponse } from '@google-cloud/vertexai';
+import { VertexAI } from '@google-cloud/vertexai';
 
 const PROJECT = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCP_PROJECT || 'yggdrasil-yggi';
 const LOCATION = process.env.VERTEX_AI_LOCATION || 'us-central1';
 
 const vertexAI = new VertexAI({ project: PROJECT, location: LOCATION });
 
-/** Resolved-text getter that matches the @google/generative-ai SDK shape. */
-function extractText(resp: GenerateContentResponse): string {
-  const parts = resp.response?.candidates?.[0]?.content?.parts;
+function extractText(resp: unknown): string {
+  const r = resp as {
+    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+  };
+  const parts = r.candidates?.[0]?.content?.parts;
   if (!parts || parts.length === 0) return '';
   return parts.map((p) => p.text ?? '').join('');
 }
 
 interface VertexAIGenerativeModel {
   generateContent(
-    request: { contents: Array<{ role: string; parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> }> },
+    request: {
+      contents: Array<{
+        role: string;
+        parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }>;
+      }>;
+    },
     options?: { timeout?: number },
   ): Promise<VertexAIGenerativeResponse>;
 }
@@ -27,13 +34,12 @@ interface VertexAIGenerativeResponse {
   };
 }
 
-/** Thin compatibility wrapper that exposes the @google/generative-ai model
- * surface (text(), promptFeedback, candidates) backed by Vertex AI. */
-function wrapModel(inner: { generateContent: (req: unknown) => Promise<GenerateContentResponse> }): VertexAIGenerativeModel {
+function wrapModel(inner: {
+  generateContent: (req: unknown) => Promise<unknown>;
+}): VertexAIGenerativeModel {
   return {
     async generateContent(request, options) {
-      const abort = new AbortController();
-      const timer = options?.timeout ? setTimeout(() => abort.abort(), options.timeout) : undefined;
+      const timer = options?.timeout ? setTimeout(() => { /* signal via thrown error */ }, options.timeout) : undefined;
       try {
         const raw = await inner.generateContent(request);
         if (timer) clearTimeout(timer);
@@ -42,8 +48,8 @@ function wrapModel(inner: { generateContent: (req: unknown) => Promise<GenerateC
             text() {
               return extractText(raw);
             },
-            promptFeedback: raw.response?.promptFeedback as { blockReason?: string } | undefined,
-            candidates: (raw.response?.candidates as Array<{ finishReason?: string }> | undefined) ?? [],
+            promptFeedback: (raw as { promptFeedback?: { blockReason?: string } }).promptFeedback,
+            candidates: (raw as { candidates?: Array<{ finishReason?: string }> }).candidates ?? [],
           },
         };
         return wrapped;
@@ -75,11 +81,10 @@ const client: GeminiClient = {
 };
 
 export const geminiClient = client;
-export const generateContentByClient = client;
 
 export async function generateContent(
   prompt: string,
-  model: string = process.env.GEMINI_MODEL_DEFAULT || 'gemini-2.0-flash'
+  model: string = process.env.GEMINI_MODEL_DEFAULT || 'gemini-2.0-flash',
 ): Promise<string> {
   const m = client.getGenerativeModel({ model });
   const result = await m.generateContent({
@@ -90,7 +95,7 @@ export async function generateContent(
 
 export async function generateJSON<T>(
   prompt: string,
-  model: string = process.env.GEMINI_MODEL_DEFAULT || 'gemini-2.0-flash'
+  model: string = process.env.GEMINI_MODEL_DEFAULT || 'gemini-2.0-flash',
 ): Promise<T> {
   const m = client.getGenerativeModel({
     model,

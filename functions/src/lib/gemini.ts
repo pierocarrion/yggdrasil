@@ -2,6 +2,10 @@ import { VertexAI } from '@google-cloud/vertexai';
 import { logger } from 'firebase-functions';
 import { defineSecret } from 'firebase-functions/params';
 
+// Allow use of any types in the Vertex AI response shape (the SDK doesn't
+// expose a clean type for `embedding.embeddings[0].values`).
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 // GEMINI_API_KEY is kept as a defineSecret for backwards compatibility with the
 // existing deploy environment. We no longer read it: this app authenticates to
 // Gemini via Vertex AI using the runtime service account (Application Default
@@ -63,10 +67,10 @@ export async function generateText(prompt: string, options?: GenerateTextOptions
       },
     });
 
-    const result = await generativeModel.generateContent({
+    const result: any = await generativeModel.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
     });
-    const text = result.response?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (text) {
       return text;
@@ -94,11 +98,11 @@ export async function generateEmbedding(text: string): Promise<number[]> {
       { model: DEFAULT_EMBEDDING_MODEL }
     );
 
-    const result = await embeddingModel.embedContent({
+    const result: any = await embeddingModel.embedContent({
       contents: [{ role: 'user', parts: [{ text }] }],
     });
 
-    const values = (result as { embedding?: { values?: number[] } }).embedding?.values;
+    const values: number[] | undefined = result?.embedding?.values ?? result?.embeddings?.[0]?.values;
     if (values && values.length > 0) {
       return values.slice(0, 768);
     }
@@ -142,7 +146,7 @@ export async function generateFromAudio(
       },
     });
 
-    const result = await generativeModel.generateContent({
+    const result: any = await generativeModel.generateContent({
       contents: [{
         role: 'user',
         parts: [
@@ -151,7 +155,7 @@ export async function generateFromAudio(
         ],
       }],
     });
-    const text = result.response?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const text = result?.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (text) {
       return text;
