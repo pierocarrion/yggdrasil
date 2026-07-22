@@ -33,12 +33,9 @@ spec:
               value: yggdrasil-yggi
             - name: APP_ENV
               value: dev
+            - name: VERTEX_AI_LOCATION
+              value: us-central1
             # Secrets injected as env vars from Secret Manager
-            - name: GEMINI_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  key: latest
-                  name: gemini-api-key
             - name: FIREBASE_ADMIN_CLIENT_EMAIL
               valueFrom:
                 secretKeyRef:

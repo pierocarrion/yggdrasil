@@ -1,26 +1,31 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { VertexAI } from '@google-cloud/vertexai';
 import { logger } from 'firebase-functions';
 import { defineSecret } from 'firebase-functions/params';
 
+// GEMINI_API_KEY is kept as a defineSecret for backwards compatibility with the
+// existing deploy environment. We no longer read it: this app authenticates to
+// Gemini via Vertex AI using the runtime service account (Application Default
+// Credentials). The secret is allowed to be unset.
 export const geminiapikey = defineSecret('GEMINI_API_KEY');
 
-// Initialize genAI lazily so it picks up the secret at runtime
-let genAI: GoogleGenerativeAI | null = null;
+// Project + region for Vertex AI. Provided as plain env vars by Cloud Run /
+// Cloud Functions secrets manager (no Secret Manager bind required).
+const PROJECT = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCP_PROJECT || 'yggdrasil-yggi';
+const LOCATION = process.env.VERTEX_AI_LOCATION || 'us-central1';
 
-function getGenAI(): GoogleGenerativeAI {
-  if (!genAI) {
-    const apiKey = process.env.GEMINI_API_KEY || '';
-    if (!apiKey) {
-      logger.warn('GEMINI_API_KEY is not set. Gemini API calls will fail.');
-    }
-    genAI = new GoogleGenerativeAI(apiKey);
+// Lazy-init so secrets are resolved at runtime, not at module load.
+let vertexAI: VertexAI | null = null;
+
+function getVertexAI(): VertexAI {
+  if (!vertexAI) {
+    vertexAI = new VertexAI({ project: PROJECT, location: LOCATION });
   }
-  return genAI;
+  return vertexAI;
 }
-
 
 /**
  * Default models as specified by LAU-AI-01 requirements.
+ * Vertex AI exposes Gemini models under publishers/google/models/<name>.
  */
 export const DEFAULT_MODEL = 'gemini-3.5-flash';
 export const DEFAULT_EMBEDDING_MODEL = 'gemini-embedding-001';
@@ -29,10 +34,6 @@ export const DEFAULT_EMBEDDING_MODEL = 'gemini-embedding-001';
  * Configuration options for generating content.
  */
 export interface GenerateTextOptions {
-  /**
-   * The model to use. Defaults to `gemini-3.5-flash` (DEFAULT_MODEL).
-   * Only upgrade or override off flash with a documented reason (coding standard).
-   */
   model?: string;
   systemInstruction?: string;
   temperature?: number;
@@ -41,18 +42,18 @@ export interface GenerateTextOptions {
 }
 
 /**
- * Generates text using the Gemini model via Google Generative AI SDK.
- * All Gemini calls in the codebase MUST route through this function.
+ * Generates text using the Gemini model via Vertex AI.
+ * Authentication uses the runtime service account (ADC) — no API key needed.
  *
- * @param prompt - The prompt to send to the model.
- * @param options - Optional configuration for the model.
+ * @param prompt The prompt to send to the model.
+ * @param options Optional configuration.
  * @returns The generated text string.
  */
 export async function generateText(prompt: string, options?: GenerateTextOptions): Promise<string> {
   const modelName = options?.model || DEFAULT_MODEL;
 
   try {
-    const generativeModel = getGenAI().getGenerativeModel({
+    const generativeModel = getVertexAI().getGenerativeModel({
       model: modelName,
       systemInstruction: options?.systemInstruction,
       generationConfig: {
@@ -60,18 +61,20 @@ export async function generateText(prompt: string, options?: GenerateTextOptions
         maxOutputTokens: options?.maxOutputTokens,
         responseMimeType: options?.responseMimeType,
       },
-    }, { apiVersion: 'v1alpha' });
+    });
 
-    const result = await generativeModel.generateContent(prompt);
-    const responseText = result.response.text();
-    
-    if (responseText) {
-      return responseText;
+    const result = await generativeModel.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    });
+    const text = result.response?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (text) {
+      return text;
     }
-    
-    throw new Error('Gemini API returned an empty response.');
+
+    throw new Error('Vertex AI returned an empty response.');
   } catch (error) {
-    logger.error('Error generating text with Gemini:', error);
+    logger.error('Error generating text with Vertex AI:', error);
     if (error instanceof Error) {
       throw new Error(`GeminiTextGenerationError: ${error.message}`);
     }
@@ -80,26 +83,29 @@ export async function generateText(prompt: string, options?: GenerateTextOptions
 }
 
 /**
- * Generates embeddings using the specified embedding model.
+ * Generates embeddings using the specified embedding model on Vertex AI.
  *
- * @param text - The text to generate embeddings for.
- * @returns An array of numbers representing the embedding.
+ * @param text The text to generate embeddings for.
+ * @returns Array of 768-dim numbers.
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
   try {
-    const embeddingModel = getGenAI().getGenerativeModel(
+    const embeddingModel = getVertexAI().getGenerativeModel(
       { model: DEFAULT_EMBEDDING_MODEL }
     );
 
-    const result = await embeddingModel.embedContent(text);
-    if (result.embedding?.values) {
-      // Truncate to 768 dimensions via MRL as requested by the user
-      return result.embedding.values.slice(0, 768);
+    const result = await embeddingModel.embedContent({
+      contents: [{ role: 'user', parts: [{ text }] }],
+    });
+
+    const values = (result as { embedding?: { values?: number[] } }).embedding?.values;
+    if (values && values.length > 0) {
+      return values.slice(0, 768);
     }
-    
+
     throw new Error('Embedding values were empty in response.');
   } catch (error) {
-    logger.error('Error generating embedding with Gemini:', error);
+    logger.error('Error generating embedding with Vertex AI:', error);
     if (error instanceof Error) {
       throw new Error(`GeminiEmbeddingGenerationError: ${error.message}`);
     }
@@ -108,13 +114,13 @@ export async function generateEmbedding(text: string): Promise<number[]> {
 }
 
 /**
- * Generates text from an audio input using Gemini's multimodal capabilities.
- * Used for voice-note transcription (YGG-97).
+ * Generates text from an audio input using Gemini's multimodal capabilities on
+ * Vertex AI (used for voice-note transcription).
  *
- * @param audioBase64 - Base64-encoded audio data.
- * @param mimeType - MIME type of the audio (e.g. 'audio/webm', 'audio/mp4').
- * @param prompt - The text prompt to accompany the audio.
- * @param options - Optional configuration for the model.
+ * @param audioBase64 Base64-encoded audio data.
+ * @param mimeType MIME type (e.g. 'audio/webm', 'audio/mp4').
+ * @param prompt Text prompt to accompany the audio.
+ * @param options Optional configuration.
  * @returns The generated text string.
  */
 export async function generateFromAudio(
@@ -126,29 +132,34 @@ export async function generateFromAudio(
   const modelName = options?.model || DEFAULT_MODEL;
 
   try {
-    const generativeModel = getGenAI().getGenerativeModel({
+    const generativeModel = getVertexAI().getGenerativeModel({
       model: modelName,
       systemInstruction: options?.systemInstruction,
       generationConfig: {
-        temperature: options?.temperature ?? 0.1, // Low temperature for faithful transcription
+        temperature: options?.temperature ?? 0.1,
         maxOutputTokens: options?.maxOutputTokens,
         responseMimeType: options?.responseMimeType,
       },
     });
 
-    const result = await generativeModel.generateContent([
-      { inlineData: { data: audioBase64, mimeType } },
-      { text: prompt },
-    ]);
-    const responseText = result.response.text();
+    const result = await generativeModel.generateContent({
+      contents: [{
+        role: 'user',
+        parts: [
+          { inlineData: { mimeType, data: audioBase64 } },
+          { text: prompt },
+        ],
+      }],
+    });
+    const text = result.response?.candidates?.[0]?.content?.parts?.[0]?.text;
 
-    if (responseText) {
-      return responseText;
+    if (text) {
+      return text;
     }
 
-    throw new Error('Gemini API returned an empty response for audio input.');
+    throw new Error('Vertex AI returned an empty response for audio input.');
   } catch (error) {
-    logger.error('Error generating text from audio with Gemini:', error);
+    logger.error('Error generating text from audio with Vertex AI:', error);
     if (error instanceof Error) {
       throw new Error(`GeminiAudioGenerationError: ${error.message}`);
     }
