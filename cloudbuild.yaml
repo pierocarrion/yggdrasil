@@ -20,9 +20,9 @@ steps:
     args:
       - 'build'
       - '-t'
-      - '$_AR_HOST/$PROJECT_ID/docker/yggdrasil-web:$_ENV-$_SHORT_SHA'
+      - '$_AR_HOST/$PROJECT_ID/yggdrasil/yggdrasil-web:$_ENV-$_SHORT_SHA'
       - '-t'
-      - '$_AR_HOST/$PROJECT_ID/docker/yggdrasil-web:$_ENV-latest'
+      - '$_AR_HOST/$PROJECT_ID/yggdrasil/yggdrasil-web:$_ENV-latest'
       - '--build-arg'
       - 'NODE_ENV=production'
       - '.'
@@ -31,7 +31,7 @@ steps:
   - id: push
     name: 'gcr.io/cloud-builders/docker'
     waitFor: ['build']
-    args: ['push', '--all-tags', '$_AR_HOST/$PROJECT_ID/docker/yggdrasil-web']
+    args: ['push', '--all-tags', '$_AR_HOST/$PROJECT_ID/yggdrasil/yggdrasil-web']
 
   # 3. Capture image digest (used for cosign + deploy).
   - id: digest
@@ -43,9 +43,9 @@ steps:
       - |
         set -euo pipefail
         DIGEST=$$(gcloud artifacts docker images describe \
-          "$_AR_HOST/$PROJECT_ID/docker/yggdrasil-web:$_ENV-$_SHORT_SHA" \
+          "$_AR_HOST/$PROJECT_ID/yggdrasil/yggdrasil-web:$_ENV-$_SHORT_SHA" \
           --format='value(image_summary.digest)')
-        echo "$_AR_HOST/$PROJECT_ID/docker/yggdrasil-web@$$DIGEST" > /workspace/image_ref
+        echo "$_AR_HOST/$PROJECT_ID/yggdrasil/yggdrasil-web@$$DIGEST" > /workspace/image_ref
         echo "Image ref: $$(cat /workspace/image_ref)"
 
   # 4. Sign image with Cosign (best-effort — Binary Authorization is DRYRUN).
@@ -116,7 +116,7 @@ steps:
 substitutions:
   _ENV: 'dev'
   _REGION: 'us-central1'
-  _AR_HOST: 'us-docker.pkg.dev'
+  _AR_HOST: 'us-central1-docker.pkg.dev'
 
 options:
   logging: CLOUD_LOGGING_ONLY
@@ -125,5 +125,5 @@ options:
 timeout: '1800s'
 
 images:
-  - '$_AR_HOST/$PROJECT_ID/docker/yggdrasil-web:$_ENV-$_SHORT_SHA'
-  - '$_AR_HOST/$PROJECT_ID/docker/yggdrasil-web:$_ENV-latest'
+  - '$_AR_HOST/$PROJECT_ID/yggdrasil/yggdrasil-web:$_ENV-$_SHORT_SHA'
+  - '$_AR_HOST/$PROJECT_ID/yggdrasil/yggdrasil-web:$_ENV-latest'
