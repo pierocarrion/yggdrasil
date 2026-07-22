@@ -11,7 +11,6 @@ metadata:
   annotations:
     run.googleapis.com/ingress: all
     run.googleapis.com/execution-environment: gen2
-    run.googleapis.com/startup-cpu-boost: "true"
 spec:
   template:
     metadata:
